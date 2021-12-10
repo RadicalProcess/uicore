@@ -1,6 +1,5 @@
 #include "Label.h"
 
-
 namespace rp::uicore
 {
     class LabelLookAndFeel : public juce::LookAndFeel_V4
@@ -8,7 +7,7 @@ namespace rp::uicore
     public:
         LabelLookAndFeel()
         {
-            setColour(juce::Label::textColourId , juce::Colours::black);
+            setColour(juce::Label::textColourId , juce::Colours::white);
         }
     };
 

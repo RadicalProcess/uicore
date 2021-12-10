@@ -1,5 +1,6 @@
 #include "Slider.h"
 #include "Utils.h"
+#include "Font.cpp"
 
 namespace rp::uicore
 {
@@ -18,27 +19,26 @@ namespace rp::uicore
             auto centreY = (float) y + (float) height * 0.5f;
             auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-            {
+           {
+               auto p = juce::Path();
+               p.addCentredArc(centreX, centreY, radius, radius, 0.0f, angle, rotaryEndAngle, true);
+               g.setColour(juce::Colour(juce::Colour(5, 61, 87)));
+               g.strokePath(p, juce::PathStrokeType( 4.0f ));
+           }
+
+           {
                 auto p = juce::Path();
-                g.setColour(juce::Colours::black);
+                g.setColour(juce::Colour(151, 188, 199));
                 p.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, angle, true);
                 g.strokePath(p, juce::PathStrokeType(4.0f));
-            }
-
-            {
-                auto p = juce::Path();
-                p.addCentredArc(centreX, centreY, radius, radius, 0.0f, angle, rotaryEndAngle, true);
-                g.setColour(juce::Colours::grey);
-                g.strokePath(p, juce::PathStrokeType( 4.0f ));
-            }
+           }
 
             const auto rect = juce::Rectangle<float>(centreX - 50, centreY - 10, 100.0f, 20.0f);
             const auto value = reduceNumDecimals(slider.getValue(), 2);
 
+            g.setColour(juce::Colours::white);
             g.drawText(juce::String(value), rect, juce::Justification::centred, false);
         }
-
-
     };
 
     Slider::Slider(const std::string& name)
@@ -49,5 +49,6 @@ namespace rp::uicore
         setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         setColour(textBoxTextColourId ,juce::Colours::black);
         setLookAndFeel(lf_.get());
+
     }
 }

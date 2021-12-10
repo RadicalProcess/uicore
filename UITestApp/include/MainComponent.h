@@ -19,7 +19,8 @@ namespace rp::uitest
 
         uicore::Label label_;
         uicore::Slider slider_;
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent);
+        juce::Image logoImage_;
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
     };
 
 }
