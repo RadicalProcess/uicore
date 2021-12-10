@@ -2,11 +2,10 @@
 
 namespace rp::uicore
 {
-
-    class Slider : public juce::Slider
+    class RotarySlider : public juce::Slider
     {
     public:
-        Slider(const std::string& name);
+        RotarySlider(const std::string& name);
 
     private:
 

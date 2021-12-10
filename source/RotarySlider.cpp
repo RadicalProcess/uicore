@@ -1,15 +1,12 @@
-#include "Slider.h"
+#include "RotarySlider.h"
 #include "Utils.h"
-#include "Font.cpp"
+#include "ColorScheme.h"
 
 namespace rp::uicore
 {
     class SliderLookAndFeel : public juce::LookAndFeel_V4
     {
     public:
-        SliderLookAndFeel()
-        {
-        }
 
         void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
                                const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override
@@ -22,33 +19,40 @@ namespace rp::uicore
            {
                auto p = juce::Path();
                p.addCentredArc(centreX, centreY, radius, radius, 0.0f, angle, rotaryEndAngle, true);
-               g.setColour(juce::Colour(juce::Colour(5, 61, 87)));
-               g.strokePath(p, juce::PathStrokeType( 4.0f ));
+               g.setColour(colors::background);
+               g.strokePath(p, juce::PathStrokeType( 3.5f ));
            }
 
            {
                 auto p = juce::Path();
-                g.setColour(juce::Colour(151, 188, 199));
+                g.setColour(colors::foreground);
                 p.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, angle, true);
-                g.strokePath(p, juce::PathStrokeType(4.0f));
+                g.strokePath(p, juce::PathStrokeType(3.5f));
+           }
+
+           {
+               auto p = juce::Point<float>  (centreX + radius * std::cos (angle - juce::MathConstants<float>::halfPi),
+                                        centreY + radius * std::sin (angle - juce::MathConstants<float>::halfPi));
+
+               g.setColour (colors::highlight);
+               g.fillEllipse (juce::Rectangle<float> (7, 7).withCentre (p));
+
            }
 
             const auto rect = juce::Rectangle<float>(centreX - 50, centreY - 10, 100.0f, 20.0f);
             const auto value = reduceNumDecimals(slider.getValue(), 2);
 
-            g.setColour(juce::Colours::white);
+            g.setColour(colors::text);
             g.drawText(juce::String(value), rect, juce::Justification::centred, false);
         }
     };
 
-    Slider::Slider(const std::string& name)
+    RotarySlider::RotarySlider(const std::string& name)
     : juce::Slider(juce::String(name.c_str()))
     , lf_(std::make_unique<SliderLookAndFeel>())
     {
         setSliderStyle(juce::Slider::SliderStyle::Rotary);
         setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        setColour(textBoxTextColourId ,juce::Colours::black);
         setLookAndFeel(lf_.get());
-
     }
 }

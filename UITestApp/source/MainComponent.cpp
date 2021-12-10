@@ -5,7 +5,8 @@ namespace rp::uitest
 {
     MainComponent::MainComponent()
     : label_("min length")
-    , slider_("slider")
+    , rSlider_("rslider")
+    , vSlider_("vslider")
     , logoImage_(juce::ImageCache::getFromMemory(BinaryData::Logo_png, BinaryData::Logo_pngSize))
     {
         setSize(800, 400);
@@ -13,8 +14,11 @@ namespace rp::uitest
         label_.setBounds(15, 255, 100, 20);
         addAndMakeVisible(label_);
 
-        slider_.setBounds(10, 280, 80, 80);
-        addAndMakeVisible(slider_);
+        rSlider_.setBounds(10, 280, 80, 80);
+        addAndMakeVisible(rSlider_);
+
+        vSlider_.setBounds(100, 280, 15, 80);
+        addAndMakeVisible(vSlider_);
     }
 
     void MainComponent::paint(juce::Graphics &g)
