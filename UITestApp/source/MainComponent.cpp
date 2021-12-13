@@ -10,6 +10,7 @@ namespace rp::uitest
     , sSlider_("sslider", 1, 5)
     , crSlider_("crslider")
     , hSlider_("hslider")
+    , textField_()
     , logoImage_(juce::ImageCache::getFromMemory(BinaryData::Logo_png, BinaryData::Logo_pngSize))
     {
         setSize(800, 400);
@@ -31,6 +32,9 @@ namespace rp::uitest
 
         hSlider_.setBounds(310, 310, 80, 15);
         addAndMakeVisible(hSlider_);
+
+        textField_.setBounds(390, 310, 80, 20);
+        addAndMakeVisible(textField_);
     }
 
     void MainComponent::paint(juce::Graphics &g)

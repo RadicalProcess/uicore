@@ -1,5 +1,5 @@
 #include "StepSlider.h"
-#include "ColorScheme.h"
+#include "Style.h"
 
 namespace rp::uicore
 {
@@ -30,8 +30,8 @@ namespace rp::uicore
                     const auto start = stepAngle * static_cast<float>(i) + rotaryStartAngle;
                     const auto end = start + stepAngle;
                     p.addCentredArc(centerX, centerY, radius, radius, 0.0f, start + gap, end - gap, true);
-                    g.setColour(value > i ? colors::foreground : colors::background);
-                    g.strokePath(p, juce::PathStrokeType(3.5f));
+                    g.setColour(value > i ? styles::foreground : styles::background);
+                    g.strokePath(p, styles::strokeTypeo);
                 }
             }
 
@@ -39,14 +39,14 @@ namespace rp::uicore
                 auto p = juce::Point<float>  (centerX + radius * std::cos (angle - juce::MathConstants<float>::halfPi),
                                               centerY + radius * std::sin (angle - juce::MathConstants<float>::halfPi));
 
-                g.setColour (colors::highlight);
+                g.setColour (styles::highlight);
                 g.fillEllipse (juce::Rectangle<float> (7, 7).withCentre (p));
             }
 
             const auto rect = juce::Rectangle<float>(centerX - 50, centerY - 10, 100.0f, 20.0f);
             const auto value = static_cast<int>(slider.getValue());
 
-            g.setColour(colors::text);
+            g.setColour(styles::text);
             g.drawText(juce::String(value), rect, juce::Justification::centred, false);
         }
 

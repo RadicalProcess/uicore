@@ -1,9 +1,11 @@
+#pragma once
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <utility>
 
 #include "Utils.h"
-#include "ColorScheme.h"
+#include "Style.h"
 
 namespace rp::uicore
 {
@@ -22,7 +24,7 @@ namespace rp::uicore
             auto p = juce::Point<float>  (center_.getX() + radius_ * std::cos(angle_ - juce::MathConstants<float>::halfPi),
                                           center_.getY() + radius_ * std::sin(angle_ - juce::MathConstants<float>::halfPi));
 
-            g.setColour (colors::highlight);
+            g.setColour (styles::highlight);
             g.fillEllipse (juce::Rectangle<float> (7, 7).withCentre (p));
         }
 
@@ -31,7 +33,7 @@ namespace rp::uicore
             auto rect = juce::Rectangle<float>(center_.getX() - 50, center_.getY() - 18, 100.0f, 20.0f);
             const auto value = reduceNumDecimals(value_, numDecimalDigits_);
 
-            g.setColour(colors::text);
+            g.setColour(styles::text);
             g.drawText(juce::String(value), rect, juce::Justification::centred, false);
             rect.setY(rect.getY() + 17);
             g.drawText(juce::String(unit_), rect, juce::Justification::centred, false);
@@ -77,16 +79,16 @@ namespace rp::uicore
         {
             auto p = juce::Path();
             p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, angle_, rotaryRange_.getEnd(), true);
-            g.setColour(colors::background);
-            g.strokePath(p, juce::PathStrokeType( 3.5f ));
+            g.setColour(styles::background);
+            g.strokePath(p, styles::strokeType);
         }
 
         void drawRotaryTrackArc(juce::Graphics& g) override
         {
             auto p = juce::Path();
-            g.setColour(colors::foreground);
+            g.setColour(styles::foreground);
             p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, rotaryRange_.getStart(), angle_, true);
-            g.strokePath(p, juce::PathStrokeType( 3.5f ));
+            g.strokePath(p, styles::strokeType);
         }
     };
 
@@ -102,17 +104,17 @@ namespace rp::uicore
         {
             auto p = juce::Path();
             p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, rotaryRange_.getStart(), rotaryRange_.getEnd(), true);
-            g.setColour(colors::background);
-            g.strokePath(p, juce::PathStrokeType( 3.5f ));
+            g.setColour(styles::background);
+            g.strokePath(p, styles::strokeType);
         }
 
         void drawRotaryTrackArc(juce::Graphics& g) override
         {
             auto p = juce::Path();
             const auto centerAngle = rotaryRange_.getLength() / 2.0f + rotaryRange_.getStart();
-            g.setColour(colors::foreground);
+            g.setColour(styles::foreground);
             p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, centerAngle, angle_, true);
-            g.strokePath(p, juce::PathStrokeType(3.5f));
+            g.strokePath(p, styles::strokeType);
         }
     };
 
