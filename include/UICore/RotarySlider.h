@@ -1,5 +1,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <utility>
+
 #include "Utils.h"
 #include "ColorScheme.h"
 
@@ -8,17 +10,41 @@ namespace rp::uicore
     class RotarySliderLookAndFeel : public juce::LookAndFeel_V4
     {
     public:
+        RotarySliderLookAndFeel(size_t numDecimalDigits, std::string unit)
+        : numDecimalDigits_(numDecimalDigits)
+        , unit_(std::move(unit)){}
+
         virtual void drawRotaryBackgroundArc(juce::Graphics& g) = 0;
         virtual void drawRotaryTrackArc(juce::Graphics& g) = 0;
-        virtual void drawRotaryThumb(juce::Graphics& g) = 0;
-        virtual void drawRotaryLabel(juce::Graphics& g) = 0;
+
+        virtual void drawRotaryThumb(juce::Graphics& g)
+        {
+            auto p = juce::Point<float>  (center_.getX() + radius_ * std::cos(angle_ - juce::MathConstants<float>::halfPi),
+                                          center_.getY() + radius_ * std::sin(angle_ - juce::MathConstants<float>::halfPi));
+
+            g.setColour (colors::highlight);
+            g.fillEllipse (juce::Rectangle<float> (7, 7).withCentre (p));
+        }
+
+        virtual void drawRotaryLabel(juce::Graphics& g)
+        {
+            auto rect = juce::Rectangle<float>(center_.getX() - 50, center_.getY() - 18, 100.0f, 20.0f);
+            const auto value = reduceNumDecimals(value_, numDecimalDigits_);
+
+            g.setColour(colors::text);
+            g.drawText(juce::String(value), rect, juce::Justification::centred, false);
+            rect.setY(rect.getY() + 17);
+            g.drawText(juce::String(unit_), rect, juce::Justification::centred, false);
+        }
 
     protected:
-        float radius_;
+        const size_t numDecimalDigits_;
+        const std::string unit_;
+        float radius_{};
         juce::Point<float> center_;
         juce::Range<float> rotaryRange_;
-        float angle_;
-        float value_;
+        float angle_{};
+        float value_{};
 
     private:
         void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
@@ -41,6 +67,11 @@ namespace rp::uicore
 
     class StandardRotarySliderLookAndFeel : public RotarySliderLookAndFeel
     {
+    public:
+        StandardRotarySliderLookAndFeel(size_t numDecimalDigits, std::string unit)
+        : RotarySliderLookAndFeel(numDecimalDigits, std::move(unit))
+        {}
+
     private:
         void drawRotaryBackgroundArc(juce::Graphics& g) override
         {
@@ -57,28 +88,15 @@ namespace rp::uicore
             p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, rotaryRange_.getStart(), angle_, true);
             g.strokePath(p, juce::PathStrokeType( 3.5f ));
         }
-
-        void drawRotaryThumb(juce::Graphics& g) override
-        {
-            auto p = juce::Point<float>  (center_.getX() + radius_ * std::cos (angle_ - juce::MathConstants<float>::halfPi),
-                                          center_.getY() + radius_ * std::sin (angle_ - juce::MathConstants<float>::halfPi));
-
-            g.setColour (colors::highlight);
-            g.fillEllipse (juce::Rectangle<float> (7, 7).withCentre (p));
-        }
-
-        void drawRotaryLabel(juce::Graphics& g) override
-        {
-            const auto rect = juce::Rectangle<float>(center_.getX() - 50, center_.getY() - 10, 100.0f, 20.0f);
-            const auto value = reduceNumDecimals(value_, 2);
-
-            g.setColour(colors::text);
-            g.drawText(juce::String(value), rect, juce::Justification::centred, false);
-        }
     };
 
     class CenterDefaultRotarySliderLookAndFeel : public RotarySliderLookAndFeel
     {
+    public:
+        CenterDefaultRotarySliderLookAndFeel(size_t numDecimalDigits, std::string&& unit)
+        : RotarySliderLookAndFeel(numDecimalDigits, std::move(unit))
+        {}
+
     private:
         void drawRotaryBackgroundArc(juce::Graphics& g) override
         {
@@ -96,32 +114,15 @@ namespace rp::uicore
             p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, centerAngle, angle_, true);
             g.strokePath(p, juce::PathStrokeType(3.5f));
         }
-
-        void drawRotaryThumb(juce::Graphics& g) override
-        {
-            auto p = juce::Point<float>  (center_.getX() + radius_ * std::cos(angle_ - juce::MathConstants<float>::halfPi),
-                                          center_.getY() + radius_ * std::sin(angle_ - juce::MathConstants<float>::halfPi));
-
-            g.setColour (colors::highlight);
-            g.fillEllipse (juce::Rectangle<float> (7, 7).withCentre (p));
-        }
-
-        void drawRotaryLabel(juce::Graphics& g) override
-        {
-            const auto rect = juce::Rectangle<float>(center_.getX() - 50, center_.getX() - 10, 100.0f, 20.0f);
-            const auto value = reduceNumDecimals(value_, 2);
-
-            g.setColour(colors::text);
-            g.drawText(juce::String(value), rect, juce::Justification::centred, false);
-        }
     };
 
     template <typename T>
     class RotarySlider : public juce::Slider
     {
     public:
-        explicit RotarySlider(const std::string& name)
+        explicit RotarySlider(const std::string& name, size_t numDecimalDigits_ = 2, std::string unit = "")
         : juce::Slider(name)
+        , lookAndFeel_(numDecimalDigits_, std::move(unit))
         {
             setSliderStyle(juce::Slider::SliderStyle::Rotary);
             setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
