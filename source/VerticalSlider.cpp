@@ -4,8 +4,6 @@
 
 namespace rp::uicore
 {
-
-
     VerticalSlider::VerticalSlider(const std::string& name)
     : juce::Slider(juce::String(name.c_str()))
     {

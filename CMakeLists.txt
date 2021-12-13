@@ -3,7 +3,7 @@ add_subdirectory(UITestApp)
 
 add_library(UICore
         source/Font.cpp
-        source/RotarySlider.cpp
+        source/StepSlider.cpp
         source/VerticalSlider.cpp
         source/Label.cpp)
 

@@ -3,6 +3,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <UICore/RotarySlider.h>
 #include <UICore/VerticalSlider.h>
+#include <UICore/StepSlider.h>
 #include <UICore/Label.h>
 
 namespace rp::uitest
@@ -19,8 +20,10 @@ namespace rp::uitest
     private:
 
         uicore::Label label_;
-        uicore::RotarySlider rSlider_;
+        uicore::StandardRotarySlider rSlider_;
         uicore::VerticalSlider vSlider_;
+        uicore::StepSlider sSlider_;
+        uicore::CenterDefaultRotarySlider crSlider_;
         juce::Image logoImage_;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
     };
