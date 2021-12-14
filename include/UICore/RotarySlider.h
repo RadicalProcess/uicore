@@ -17,9 +17,6 @@ namespace rp::uicore
         : numDecimalDigits_(numDecimalDigits)
         , unit_(std::move(unit)){}
 
-        virtual void drawRotaryBackgroundArc(juce::Graphics& g) = 0;
-        virtual void drawRotaryTrackArc(juce::Graphics& g) = 0;
-
         virtual void drawRotaryThumb(juce::Graphics& g)
         {
             auto p = juce::Point<float>  (center_.getX() + radius_ * std::cos(angle_ - juce::MathConstants<float>::halfPi),
@@ -40,6 +37,22 @@ namespace rp::uicore
             rect.setY(radius_ * 2.0f - 10.0f);
             g.setFont(13.0f);
             g.drawText(juce::String(unit_), rect, juce::Justification::centred, false);
+        }
+
+        virtual void drawRotaryBackgroundArc(juce::Graphics& g)
+        {
+            auto p = juce::Path();
+            p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, angle_, rotaryRange_.getEnd(), true);
+            g.setColour(styles::background);
+            g.strokePath(p, styles::strokeType);
+        }
+
+        virtual void drawRotaryTrackArc(juce::Graphics& g)
+        {
+            auto p = juce::Path();
+            g.setColour(styles::foreground);
+            p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, rotaryRange_.getStart(), angle_, true);
+            g.strokePath(p, styles::strokeType);
         }
 
     protected:
@@ -70,28 +83,25 @@ namespace rp::uicore
         }
     };
 
-    class StandardRotarySliderLookAndFeel : public RotarySliderLookAndFeel
+    class RotarySliderLookAndFeelDecibel : public RotarySliderLookAndFeel
     {
     public:
-        StandardRotarySliderLookAndFeel(size_t numDecimalDigits, std::string unit)
+        RotarySliderLookAndFeelDecibel(size_t numDecimalDigits, std::string&& unit)
         : RotarySliderLookAndFeel(numDecimalDigits, std::move(unit))
         {}
 
     private:
-        void drawRotaryBackgroundArc(juce::Graphics& g) override
+        void drawRotaryLabel(juce::Graphics& g) override
         {
-            auto p = juce::Path();
-            p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, angle_, rotaryRange_.getEnd(), true);
-            g.setColour(styles::background);
-            g.strokePath(p, styles::strokeType);
-        }
+            auto rect = juce::Rectangle<float>(center_.getX() - 50, center_.getY() - 10, 100.0f, 20.0f);
+            const auto value = reduceNumDecimals(value_, numDecimalDigits_);
 
-        void drawRotaryTrackArc(juce::Graphics& g) override
-        {
-            auto p = juce::Path();
-            g.setColour(styles::foreground);
-            p.addCentredArc(center_.getX(), center_.getY(), radius_, radius_, 0.0f, rotaryRange_.getStart(), angle_, true);
-            g.strokePath(p, styles::strokeType);
+            g.setFont(getRobotoCondensed());
+            g.setColour(styles::text);
+            g.drawText(rotaryRange_.getStart() == angle_ ? "-inf" : juce::String(value), rect, juce::Justification::centred, false);
+            rect.setY(radius_ * 2.0f - 10.0f);
+            g.setFont(13.0f);
+            g.drawText(juce::String(unit_), rect, juce::Justification::centred, false);
         }
     };
 
@@ -138,6 +148,7 @@ namespace rp::uicore
         T lookAndFeel_;
     };
 
-    using StandardRotarySlider = RotarySlider<StandardRotarySliderLookAndFeel>;
+    using StandardRotarySlider = RotarySlider<RotarySliderLookAndFeel>;
+    using DecibelRotarySlider = RotarySlider<RotarySliderLookAndFeelDecibel>;
     using CenterDefaultRotarySlider = RotarySlider<CenterDefaultRotarySliderLookAndFeel>;
 }
