@@ -7,7 +7,7 @@ namespace rp::uicore
     class Label : public juce::Label
     {
     public:
-        Label(const std::string& name);
+        Label(const std::string& name, const std::string& text);
 
     private:
 

@@ -4,7 +4,7 @@
 namespace rp::uitest
 {
     MainComponent::MainComponent()
-    : label_("min length")
+    : label_("min length", "min length")
     , rSlider_("rslider", 1, "ms")
     , vSlider_("vslider")
     , sSlider_("sslider", 1, 5)
