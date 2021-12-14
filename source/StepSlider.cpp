@@ -1,5 +1,6 @@
 #include "StepSlider.h"
 #include "Style.h"
+#include "Font.h"
 
 namespace rp::uicore
 {
@@ -31,7 +32,7 @@ namespace rp::uicore
                     const auto end = start + stepAngle;
                     p.addCentredArc(centerX, centerY, radius, radius, 0.0f, start + gap, end - gap, true);
                     g.setColour(value > i ? styles::foreground : styles::background);
-                    g.strokePath(p, styles::strokeTypeo);
+                    g.strokePath(p, styles::strokeType);
                 }
             }
 
@@ -46,6 +47,7 @@ namespace rp::uicore
             const auto rect = juce::Rectangle<float>(centerX - 50, centerY - 10, 100.0f, 20.0f);
             const auto value = static_cast<int>(slider.getValue());
 
+            g.setFont(getRobotoCondensed());
             g.setColour(styles::text);
             g.drawText(juce::String(value), rect, juce::Justification::centred, false);
         }

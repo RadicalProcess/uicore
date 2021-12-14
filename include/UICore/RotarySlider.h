@@ -6,6 +6,7 @@
 
 #include "Utils.h"
 #include "Style.h"
+#include "Font.h"
 
 namespace rp::uicore
 {
@@ -33,6 +34,7 @@ namespace rp::uicore
             auto rect = juce::Rectangle<float>(center_.getX() - 50, center_.getY() - 18, 100.0f, 20.0f);
             const auto value = reduceNumDecimals(value_, numDecimalDigits_);
 
+            g.setFont(getRobotoCondensed());
             g.setColour(styles::text);
             g.drawText(juce::String(value), rect, juce::Justification::centred, false);
             rect.setY(rect.getY() + 17);

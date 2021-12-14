@@ -1,4 +1,5 @@
 #include "Label.h"
+#include "Font.h"
 
 namespace rp::uicore
 {
@@ -15,6 +16,7 @@ namespace rp::uicore
     : juce::Label(juce::String(name.c_str()), juce::String(name.c_str()))
     , lf_(std::make_unique<LabelLookAndFeel>())
     {
+        setFont(getRobotoCondensed());
         setLookAndFeel(lf_.get());
     }
 

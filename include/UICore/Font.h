@@ -4,5 +4,5 @@
 
 namespace rp::uicore
 {
-     juce::Font& getJosefinSans();
+    juce::Font& getRobotoCondensed();
 }

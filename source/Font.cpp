@@ -5,10 +5,10 @@ using namespace juce;
 
 namespace rp::uicore
 {
-    juce::Font& getJosefinSans()
+    juce::Font& getRobotoCondensed()
     {
-        static auto josefinSans (juce::Font (Typeface::createSystemTypefaceFor (BinaryData::JosefinSansBold_ttf,
-                                                                          BinaryData::JosefinSansBold_ttfSize)));
-        return josefinSans;
+        static auto robotoCondensed (juce::Font (Typeface::createSystemTypefaceFor (BinaryData::RobotoCondensed_ttf,
+                                                                          BinaryData::RobotoCondensed_ttfSize)));
+        return robotoCondensed;
     }
 }

@@ -33,7 +33,7 @@ namespace rp::uitest
         hSlider_.setBounds(310, 310, 80, 15);
         addAndMakeVisible(hSlider_);
 
-        textField_.setBounds(390, 310, 80, 20);
+        textField_.setBounds(390, 310, 80, 25);
         addAndMakeVisible(textField_);
     }
 

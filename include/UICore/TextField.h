@@ -14,9 +14,16 @@ namespace rp::uicore
             setColour(juce::TextEditor::textColourId, styles::text);
             setColour(juce::TextEditor::highlightColourId, styles::highlight);
             setColour(juce::TextEditor::highlightedTextColourId, styles::background);
-            setColour(juce::TextEditor::outlineColourId, styles::background);
-            setColour(juce::TextEditor::focusedOutlineColourId, styles::background);
+            setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
+            setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
             setColour(juce::TextEditor::shadowColourId, styles::foreground);
+        }
+
+    private:
+        void fillTextEditorBackground (juce::Graphics& g, int /*width*/, int /*height*/, juce::TextEditor& textEditor) override
+        {
+            g.setColour(textEditor.findColour (juce::TextEditor::backgroundColourId));
+            g.fillRoundedRectangle(textEditor.getLocalBounds().toFloat(), 10.0f);
         }
     };
 
@@ -25,6 +32,7 @@ namespace rp::uicore
     public:
         TextField()
         {
+            setFont(getRobotoCondensed());
             setLookAndFeel(&lf_);
         }
 

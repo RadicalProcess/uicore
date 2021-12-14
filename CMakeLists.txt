@@ -12,7 +12,7 @@ target_include_directories(UICore
 
 juce_add_binary_data(UIResource
         SOURCES
-        resource/JosefinSans-Bold.ttf
+        resource/RobotoCondensed.ttf
         resource/Logo.png)
 
 target_link_libraries(UICore
