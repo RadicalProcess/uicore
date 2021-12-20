@@ -8,7 +8,7 @@ namespace rp::uicore
     {
     public:
         explicit StepSliderLookAndFeel(size_t steps)
-        : steps_(steps){
+                : steps_(steps){
 
         }
 
@@ -64,5 +64,10 @@ namespace rp::uicore
         setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         setRange(min, static_cast<double>(min + static_cast<int>(steps) - 1 ), 1.0);
         setLookAndFeel(lf_.get());
+    }
+
+    StepSlider::~StepSlider()
+    {
+        setLookAndFeel(nullptr);
     }
 }

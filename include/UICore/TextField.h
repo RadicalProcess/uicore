@@ -36,6 +36,11 @@ namespace rp::uicore
             setLookAndFeel(&lf_);
         }
 
+        ~TextField() override
+        {
+            setLookAndFeel(nullptr);
+        }
+
     private:
         TextFieldLookAndFeel lf_;
     };

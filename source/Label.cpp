@@ -22,4 +22,10 @@ namespace rp::uicore
         setJustificationType(juce::Justification::Flags::centred);
     }
 
+    Label::~Label()
+    {
+        setLookAndFeel(nullptr);
+
+    }
+
 }

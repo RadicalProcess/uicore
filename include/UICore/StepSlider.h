@@ -9,6 +9,7 @@ namespace rp::uicore
     public:
         StepSlider(const std::string& name, int min, size_t steps);
 
+        ~StepSlider() override;
     private:
         std::unique_ptr<juce::LookAndFeel> lf_;
     };

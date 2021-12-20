@@ -144,6 +144,11 @@ namespace rp::uicore
             setLookAndFeel(&lookAndFeel_);
         }
 
+        ~RotarySlider() override
+        {
+            setLookAndFeel(nullptr);
+        }
+
     private:
         T lookAndFeel_;
     };
