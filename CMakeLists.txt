@@ -6,6 +6,9 @@ add_library(UICore
         source/StepSlider.cpp
         source/Label.cpp)
 
+
+add_library(rp::UICore ALIAS UICore)
+
 target_include_directories(UICore
         PRIVATE include/UICore
         PUBLIC include)
