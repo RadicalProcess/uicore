@@ -8,9 +8,7 @@ namespace rp::uicore
     {
     public:
         explicit StepSliderLookAndFeel(size_t steps)
-                : steps_(steps){
-
-        }
+        : steps_(steps){}
 
         void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
                                const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override
@@ -19,13 +17,13 @@ namespace rp::uicore
             const auto centerX = static_cast<float>(x) + static_cast<float>(width) * 0.5f;
             const auto centerY = static_cast<float>(y) + static_cast<float>(height) * 0.5f;
             const auto angleRange = rotaryEndAngle - rotaryStartAngle;
-            const auto stepAngle = angleRange / static_cast<float>(steps_-1);
+            const auto stepAngle = angleRange / static_cast<float>(steps_);
             const auto angle = rotaryStartAngle + sliderPos * angleRange;
             const auto gap = 0.1f;
 
             {
                 auto value = static_cast<int>(slider.getValue() - slider.getMinimum());
-                for (auto i = static_cast<size_t>(0); i < (steps_-1); ++i)
+                for (auto i = static_cast<size_t>(0); i < steps_; ++i)
                 {
                     auto p = juce::Path();
                     const auto start = stepAngle * static_cast<float>(i) + rotaryStartAngle;
