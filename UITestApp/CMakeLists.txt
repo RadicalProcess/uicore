@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(UITest VERSION 0.0.1)
-
 juce_add_gui_app(UITest PRODUCT_NAME "UI Test")
 
 target_include_directories(UITest
@@ -22,7 +20,7 @@ target_compile_definitions(UITest
 target_link_libraries(UITest
         PRIVATE
         juce::juce_gui_extra
-        UICore
+        rp::UICore
         PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

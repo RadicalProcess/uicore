@@ -1,8 +1,11 @@
 #pragma once
 
 #include <juce_gui_extra/juce_gui_extra.h>
-#include <UICore/Slider.h>
+#include <UICore/RotarySlider.h>
+#include <UICore/StraightSlider.h>
+#include <UICore/StepSlider.h>
 #include <UICore/Label.h>
+#include <UICore/TextField.h>
 
 namespace rp::uitest
 {
@@ -18,8 +21,14 @@ namespace rp::uitest
     private:
 
         uicore::Label label_;
-        uicore::Slider slider_;
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent);
+        uicore::StandardRotarySlider rSlider_;
+        uicore::VerticalSlider vSlider_;
+        uicore::StepSlider sSlider_;
+        uicore::CenterDefaultRotarySlider crSlider_;
+        uicore::HorizontalSlider hSlider_;
+        uicore::TextField textField_;
+        juce::Image logoImage_;
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
     };
 
 }
