@@ -10,6 +10,7 @@ namespace rp::uitest
     , sSlider_("sslider", 1, 5)
     , crSlider_("crslider")
     , hSlider_("hslider")
+    , dbSlider_("dbslider")
     , textField_()
     , logoImage_(juce::ImageCache::getFromMemory(BinaryData::Logo_png, BinaryData::Logo_pngSize))
     {
@@ -30,10 +31,15 @@ namespace rp::uitest
         crSlider_.setBounds(220, 280, 80, 80);
         addAndMakeVisible(crSlider_);
 
-        hSlider_.setBounds(310, 310, 80, 15);
+        dbSlider_.setBounds(310, 280, 80, 80);
+        dbSlider_.setRange(-96.0, 6.0);
+        dbSlider_.setSkewFactor(3.0f);
+        addAndMakeVisible(dbSlider_);
+
+        hSlider_.setBounds(400, 310, 80, 15);
         addAndMakeVisible(hSlider_);
 
-        textField_.setBounds(390, 310, 80, 25);
+        textField_.setBounds(490, 310, 80, 25);
         addAndMakeVisible(textField_);
     }
 
@@ -41,7 +47,7 @@ namespace rp::uitest
     {
         g.fillAll(juce::Colours::black);
 
-        g.drawImageWithin(logoImage_,530, 5, 265, 40, juce::RectanglePlacement::Flags::stretchToFit);
+        g.drawImageWithin(logoImage_, 530, 5, 265, 40, juce::RectanglePlacement::Flags::stretchToFit);
     }
 
     void MainComponent::resized()
