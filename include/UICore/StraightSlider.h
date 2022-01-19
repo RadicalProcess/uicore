@@ -22,4 +22,5 @@ namespace rp::uicore
 
     using VerticalSlider = StraightSlider<juce::Slider::SliderStyle::LinearVertical>;
     using HorizontalSlider = StraightSlider<juce::Slider::SliderStyle::LinearHorizontal>;
+    using VerticalRangeSlider = StraightSlider<juce::Slider::SliderStyle::TwoValueVertical>;
 }

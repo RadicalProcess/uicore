@@ -28,6 +28,7 @@ namespace rp::uitest
         uicore::HorizontalSlider hSlider_;
         uicore::DecibelRotarySlider dbSlider_;
         uicore::TextField textField_;
+        uicore::VerticalRangeSlider vrSlider_;
         juce::Image logoImage_;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
     };
