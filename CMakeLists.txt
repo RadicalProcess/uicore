@@ -4,6 +4,7 @@ add_subdirectory(UITestApp)
 add_library(UICore
         source/Font.cpp
         source/StepSlider.cpp
+        source/GlissonSlider.cpp
         source/Label.cpp)
 
 

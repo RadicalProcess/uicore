@@ -6,6 +6,7 @@
 #include <UICore/StepSlider.h>
 #include <UICore/Label.h>
 #include <UICore/TextField.h>
+#include <UICore/GlissonSlider.h>
 
 namespace rp::uitest
 {
@@ -29,6 +30,7 @@ namespace rp::uitest
         uicore::DecibelRotarySlider dbSlider_;
         uicore::TextField textField_;
         uicore::VerticalRangeSlider vrSlider_;
+        uicore::GlissonSlider gSlider_;
         juce::Image logoImage_;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
     };

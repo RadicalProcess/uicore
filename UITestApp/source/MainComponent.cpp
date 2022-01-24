@@ -45,6 +45,9 @@ namespace rp::uitest
 
         vrSlider_.setBounds(580, 280, 15, 80);
         addAndMakeVisible(vrSlider_);
+
+        gSlider_.setBounds(650, 280, 100, 100);
+        addAndMakeVisible(gSlider_);
     }
 
     void MainComponent::paint(juce::Graphics &g)
