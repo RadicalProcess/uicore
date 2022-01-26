@@ -4,7 +4,10 @@ add_subdirectory(UITestApp)
 add_library(UICore
         source/Font.cpp
         source/StepSlider.cpp
-        source/GlissonSlider.cpp
+        source/GlissonSlider/HorizontalKnob.cpp
+        source/GlissonSlider/VerticalKnob.cpp
+        source/GlissonSlider/Slider.cpp
+        source/GlissonSlider/Knob.cpp
         source/Label.cpp)
 
 

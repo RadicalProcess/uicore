@@ -6,7 +6,8 @@
 #include <UICore/StepSlider.h>
 #include <UICore/Label.h>
 #include <UICore/TextField.h>
-#include <UICore/GlissonSlider.h>
+#include <UICore/GlissonSlider/Slider.h>
+#include <UICore/ToggleButton.h>
 
 namespace rp::uitest
 {
@@ -28,9 +29,10 @@ namespace rp::uitest
         uicore::CenterDefaultRotarySlider crSlider_;
         uicore::HorizontalSlider hSlider_;
         uicore::DecibelRotarySlider dbSlider_;
-        uicore::TextField textField_;
         uicore::VerticalRangeSlider vrSlider_;
-        uicore::GlissonSlider gSlider_;
+        uicore::glisson::Slider gSlider_;
+        uicore::ToggleButton tButton_;
+        uicore::TextField textField_;
         juce::Image logoImage_;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
     };

@@ -12,6 +12,7 @@ namespace rp::uitest
     , hSlider_("hslider")
     , dbSlider_("dbslider")
     , vrSlider_("vrSlider")
+    , tButton_("tButton")
     , textField_()
     , logoImage_(juce::ImageCache::getFromMemory(BinaryData::Logo_png, BinaryData::Logo_pngSize))
     {
@@ -48,6 +49,9 @@ namespace rp::uitest
 
         gSlider_.setBounds(650, 280, 100, 100);
         addAndMakeVisible(gSlider_);
+
+        tButton_.setBounds(100, 100, 30, 30);
+        addAndMakeVisible(tButton_);
     }
 
     void MainComponent::paint(juce::Graphics &g)
