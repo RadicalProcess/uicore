@@ -47,7 +47,7 @@ namespace rp::uitest
         vrSlider_.setBounds(580, 280, 15, 80);
         addAndMakeVisible(vrSlider_);
 
-        gSlider_.setBounds(650, 280, 100, 100);
+        gSlider_.setBounds(650, 280, 120, 100);
         addAndMakeVisible(gSlider_);
 
         tButton_.setBounds(100, 100, 30, 30);

@@ -3,6 +3,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "Knob.h"
+#include "DisabledRenderer.h"
+#include "EnabledRenderer.h"
 
 namespace rp::uicore::glisson
 {
@@ -49,6 +51,10 @@ namespace rp::uicore::glisson
         void mouseUp(const juce::MouseEvent& event) override;
 
         std::vector<std::unique_ptr<Knob>> knobs_;
+        bool enabled_;
 
+        EnabledRenderer enabledRenderer_;
+        DisabledRenderer disabledRenderer_;
+        IRenderer* renderer_;
     };
 }
