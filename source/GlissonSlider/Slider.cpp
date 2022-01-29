@@ -13,6 +13,17 @@ namespace rp::uicore::glisson
     , disabledRenderer_(knobs_)
     , renderer_(&enabledRenderer_)
     {
+        const auto width = 110.0f;
+        const auto height = 80.0f;
+
+        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, width, 5.0f));
+        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, width, 5.0f));
+        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, width, height - 5.0f));
+        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, width, height - 5.0f));
+        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, height, 5.0f));
+        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, height, 5.0f));
+        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, height, width - 5.0f));
+        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, height, width - 5.0f));
     }
 
     void Slider::paint(juce::Graphics& g)
@@ -80,19 +91,6 @@ namespace rp::uicore::glisson
 
     void Slider::resized()
     {
-        const auto localBounds = getLocalBounds();
-        knobs_.clear();
 
-        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, localBounds.getWidth(), 5.0f));
-        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, localBounds.getWidth(), 5.0f));
-
-        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, localBounds.getWidth(), localBounds.getHeight() - 5.0f));
-        knobs_.emplace_back(std::make_unique<HorizontalKnob>(0.5f, localBounds.getWidth(), localBounds.getHeight() - 5.0f));
-
-        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, localBounds.getHeight(), 5.0f));
-        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, localBounds.getHeight(), 5.0f));
-
-        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, localBounds.getHeight(), localBounds.getWidth() - 5.0f));
-        knobs_.emplace_back(std::make_unique<VerticalKnob>(0.5f, localBounds.getHeight(), localBounds.getWidth() - 5.0f));
     }
 }
