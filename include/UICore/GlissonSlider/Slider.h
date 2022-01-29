@@ -1,7 +1,9 @@
 #pragma once
 
+#include <set>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "KnobId.h"
 #include "Knob.h"
 #include "DisabledRenderer.h"
 #include "EnabledRenderer.h"
@@ -11,35 +13,28 @@ namespace rp::uicore::glisson
     class Slider : public juce::Component
     {
     public:
-        enum SliderGroup
-        {
-            StartPosition,
-            EndPosition,
-            StartPitch,
-            EndPitch
-        };
 
         class Listener
         {
         public:
             virtual ~Listener() = default;
 
-            virtual void onSliderValueChanged(SliderGroup sliderGroup, float min, float max) = 0;
+            virtual void onSliderValueChanged(KnobId knobId, float value) = 0;
         };
 
     public:
         Slider();
 
-        void setStartLeft(float value);
-        void setStartRight(float value);
-        void setEndLeft(float value);
-        void setEndRight(float value);
-        void setStartMin(float value);
-        void setStartMax(float value);
-        void setEndMin(float value);
-        void setEndMax(float value);
+        void set(KnobId knobId, float value);
+
+        void setGlissonEnabled(bool enabled);
+
+        void addListener(Listener* listener);
+
+        void removeListener(Listener* listener);
 
     private:
+
         void resized() override;
 
         void paint(juce::Graphics& g) override;
@@ -50,9 +45,8 @@ namespace rp::uicore::glisson
 
         void mouseUp(const juce::MouseEvent& event) override;
 
+        std::set<Listener*> listeners_;
         std::vector<std::unique_ptr<Knob>> knobs_;
-        bool enabled_;
-
         EnabledRenderer enabledRenderer_;
         DisabledRenderer disabledRenderer_;
         IRenderer* renderer_;

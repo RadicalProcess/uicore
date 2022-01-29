@@ -8,12 +8,10 @@
 
 namespace rp::uicore::glisson
 {
-
     Slider::Slider()
-    : enabled_(true)
-    , enabledRenderer_(knobs_)
+    : enabledRenderer_(knobs_)
     , disabledRenderer_(knobs_)
-    , renderer_(&disabledRenderer_)
+    , renderer_(&enabledRenderer_)
     {
     }
 
@@ -43,7 +41,10 @@ namespace rp::uicore::glisson
             return;
 
         (*itr)->setPoint(event.position);
-        repaint();
+
+        for(auto* listener : listeners_)
+            listener->onSliderValueChanged(static_cast<KnobId>(itr - knobs_.begin()), (*itr)->getValue());
+
     }
 
     void Slider::mouseUp(const juce::MouseEvent& event)
@@ -52,44 +53,29 @@ namespace rp::uicore::glisson
             knob->dragged_ = false;
     }
 
-    void Slider::setStartLeft(float value)
+    void Slider::set(KnobId knobId, float value)
     {
-        knobs_[knobs_[0]->getValue() <= knobs_[1]->getValue() ? 0 : 1]->setValue(value);
+        knobs_[knobId]->setValue(value);
+        repaint();
     }
 
-    void Slider::setStartRight(float value)
+    void Slider::setGlissonEnabled(bool enabled)
     {
-        knobs_[knobs_[0]->getValue() <= knobs_[1]->getValue() ? 1 : 0]->setValue(value);
+        if(enabled)
+            renderer_ = &enabledRenderer_;
+        else
+            renderer_ = &disabledRenderer_;
+        repaint();
     }
 
-    void Slider::setEndLeft(float value)
+    void Slider::addListener(Slider::Listener* listener)
     {
-        knobs_[knobs_[2]->getValue() <= knobs_[3]->getValue() ? 2 : 3]->setValue(value);
+        listeners_.insert(listener);
     }
 
-    void Slider::setEndRight(float value)
+    void Slider::removeListener(Slider::Listener* listener)
     {
-        knobs_[knobs_[2]->getValue() <= knobs_[3]->getValue() ? 3 : 2]->setValue(value);
-    }
-
-    void Slider::setStartMin(float value)
-    {
-        knobs_[knobs_[4]->getValue() <= knobs_[4]->getValue() ? 4 : 5]->setValue(value);
-    }
-
-    void Slider::setStartMax(float value)
-    {
-        knobs_[knobs_[4]->getValue() <= knobs_[5]->getValue() ? 5 : 4]->setValue(value);
-    }
-
-    void Slider::setEndMin(float value)
-    {
-        knobs_[knobs_[6]->getValue() <= knobs_[7]->getValue() ? 6 : 7]->setValue(value);
-    }
-
-    void Slider::setEndMax(float value)
-    {
-        knobs_[knobs_[7]->getValue() <= knobs_[6]->getValue() ? 7 : 6]->setValue(value);
+        listeners_.erase(listener);
     }
 
     void Slider::resized()

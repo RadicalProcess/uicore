@@ -12,6 +12,7 @@ namespace rp::uitest
     , hSlider_("hslider")
     , dbSlider_("dbslider")
     , vrSlider_("vrSlider")
+    , loopBack_(gSlider_)
     , tButton_("tButton")
     , textField_()
     , logoImage_(juce::ImageCache::getFromMemory(BinaryData::Logo_png, BinaryData::Logo_pngSize))

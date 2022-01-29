@@ -1,8 +1,22 @@
 #include "GlissonSlider/EnabledRenderer.h"
 #include "Style.h"
+#include "GlissonSlider/KnobId.h"
 
 namespace rp::uicore::glisson
 {
+    namespace
+    {
+        Knob& getMin(Knob& knobA, Knob& knobB)
+        {
+            return knobA.getValue() <= knobB.getValue() ? knobA : knobB;
+        }
+
+        Knob& getMax(Knob& knobA, Knob& knobB)
+        {
+            return knobA.getValue() >= knobB.getValue() ? knobA : knobB;
+        }
+    }
+
     EnabledRenderer::EnabledRenderer(const std::vector<std::unique_ptr<Knob>>& knobs)
     : knobs_(knobs)
     {
@@ -31,14 +45,10 @@ namespace rp::uicore::glisson
         }
 
         g.setColour(styles::foreground);
-        auto top = knobs_[0]->getValue() <= knobs_[1]->getValue() ? std::pair<size_t, size_t>(0, 1) : std::pair<size_t, size_t>(1, 0);
-        auto bottom = knobs_[2]->getValue() <= knobs_[3]->getValue() ? std::pair<size_t, size_t>(2, 3) : std::pair<size_t, size_t>(3, 2);
-        auto left = knobs_[4]->getValue() <= knobs_[5]->getValue() ? std::pair<size_t, size_t>(4, 5) : std::pair<size_t, size_t>(5, 4);
-        auto right = knobs_[6]->getValue() <= knobs_[7]->getValue() ? std::pair<size_t, size_t>(6, 7) : std::pair<size_t, size_t>(7, 6);
 
-        drawLine(g, knobs_[top.first]->getPoint(), knobs_[bottom.first]->getPoint());
-        drawLine(g, knobs_[top.second]->getPoint(), knobs_[bottom.second]->getPoint());
-        drawLine(g, knobs_[left.first]->getPoint(), knobs_[right.first]->getPoint());
-        drawLine(g, knobs_[left.second]->getPoint(), knobs_[right.second]->getPoint());
+        drawLine(g, getMin(*knobs_[TopA], *knobs_[TopB]).getPoint(), getMin(*knobs_[BottomA], *knobs_[BottomB]).getPoint());
+        drawLine(g, getMax(*knobs_[TopA], *knobs_[TopB]).getPoint(), getMax(*knobs_[BottomA], *knobs_[BottomB]).getPoint());
+        drawLine(g, getMin(*knobs_[LeftA], *knobs_[LeftB]).getPoint(), getMin(*knobs_[RightA], *knobs_[RightB]).getPoint());
+        drawLine(g, getMax(*knobs_[LeftA], *knobs_[LeftB]).getPoint(), getMax(*knobs_[RightA], *knobs_[RightB]).getPoint());
     }
 }

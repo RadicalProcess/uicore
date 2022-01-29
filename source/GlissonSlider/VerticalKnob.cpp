@@ -13,7 +13,7 @@ namespace rp::uicore::glisson
     float VerticalKnob::convertToValue(const juce::Point<float>& point)
     {
         const auto yPosition = point.getY();
-        return 1.0f-std::clamp((yPosition - 9.f) / (height_ - 18.0f), 0.0f, 1.0f);
+        return 1.0f - std::clamp((yPosition - 9.f) / (height_ - 18.0f), 0.0f, 1.0f);
     }
 
     juce::Point<float> VerticalKnob::convertToPoint(float value)

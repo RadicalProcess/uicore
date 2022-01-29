@@ -9,6 +9,8 @@
 #include <UICore/GlissonSlider/Slider.h>
 #include <UICore/ToggleButton.h>
 
+#include "LoopBack.h"
+
 namespace rp::uitest
 {
     class MainComponent : public juce::Component
@@ -31,6 +33,7 @@ namespace rp::uitest
         uicore::DecibelRotarySlider dbSlider_;
         uicore::VerticalRangeSlider vrSlider_;
         uicore::glisson::Slider gSlider_;
+        LoopBack loopBack_;
         uicore::ToggleButton tButton_;
         uicore::TextField textField_;
         juce::Image logoImage_;
