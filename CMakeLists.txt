@@ -5,6 +5,7 @@ add_library(UICore
         source/Font.cpp
         source/StepSlider.cpp
         source/Keyboard.cpp
+        source/FunctionEditor.cpp
         source/GlissonSlider/HorizontalKnob.cpp
         source/GlissonSlider/VerticalKnob.cpp
         source/GlissonSlider/Slider.cpp
