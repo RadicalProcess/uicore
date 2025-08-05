@@ -44,7 +44,7 @@ namespace rp::uicore
             if (event.mods.isShiftDown())
             {
                 listeners_.call([nodeIndex](Listener& l) {
-                    l.functionNodeDeleted(static_cast<size_t>(nodeIndex));
+                    l.nodeDeleted(static_cast<size_t>(nodeIndex));
                 });
             }
             else
@@ -53,14 +53,14 @@ namespace rp::uicore
                 draggedNodeIndex_ = nodeIndex;
 
                 listeners_.call([nodeIndex, &normalizedPos](Listener& l) {
-                    l.functionNodeClicked(static_cast<size_t>(nodeIndex), normalizedPos.x, normalizedPos.y);
+                    l.nodeClicked(static_cast<size_t>(nodeIndex), normalizedPos.x, normalizedPos.y);
                 });
             }
         }
         else
         {
             listeners_.call([&normalizedPos](Listener& l) {
-                l.functionNodeAdded(normalizedPos.x, normalizedPos.y);
+                l.nodeAdded(normalizedPos.x, normalizedPos.y);
             });
         }
 
@@ -94,7 +94,7 @@ namespace rp::uicore
             }
 
             listeners_.call([nodeIndex, newX, newY](Listener& l) {
-                l.functionNodeDragged(nodeIndex, newX, newY);
+                l.nodeDragged(nodeIndex, newX, newY);
             });
         }
 

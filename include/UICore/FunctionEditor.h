@@ -25,10 +25,10 @@ namespace rp::uicore
         {
         public:
             virtual ~Listener() = default;
-            virtual void functionNodeClicked(size_t index, float normalizedX, float normalizedY) = 0;
-            virtual void functionNodeDragged(size_t index, float normalizedX, float normalizedY) = 0;
-            virtual void functionNodeAdded(float normalizedX, float normalizedY) = 0;
-            virtual void functionNodeDeleted(size_t index) = 0;
+            virtual void nodeClicked(size_t index, float normalizedX, float normalizedY) = 0;
+            virtual void nodeDragged(size_t index, float normalizedX, float normalizedY) = 0;
+            virtual void nodeAdded(float normalizedX, float normalizedY) = 0;
+            virtual void nodeDeleted(size_t index) = 0;
         };
 
         FunctionEditor();
