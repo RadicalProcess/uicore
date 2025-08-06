@@ -142,6 +142,27 @@ namespace rp::uicore
 
     void FunctionEditor::renderNodes(juce::Graphics& g)
     {
+        // First, draw connecting lines between consecutive nodes
+        if (nodes_.size() > 1)
+        {
+            // Create a sorted copy of nodes by x coordinate for proper line connections
+            auto sortedNodes = nodes_;
+            std::sort(sortedNodes.begin(), sortedNodes.end(), [](const FunctionNode& a, const FunctionNode& b) {
+                return a.x < b.x;
+            });
+            
+            g.setColour(juce::Colour(150, 150, 150)); // Light gray for connecting lines
+            
+            for (size_t i = 0; i < sortedNodes.size() - 1; ++i)
+            {
+                const auto startPos = normalizedToComponent(sortedNodes[i].x, sortedNodes[i].y);
+                const auto endPos = normalizedToComponent(sortedNodes[i + 1].x, sortedNodes[i + 1].y);
+                
+                g.drawLine(startPos.x, startPos.y, endPos.x, endPos.y, 1.5f);
+            }
+        }
+        
+        // Then draw the individual nodes on top of the lines
         for (size_t i = 0; i < nodes_.size(); ++i)
         {
             const auto& node = nodes_[i];
