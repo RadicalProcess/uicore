@@ -6,9 +6,6 @@ namespace rp::uicore
 {
 
     Waveform::Waveform()
-    : numChannels_(0)
-    , durationInSeconds_(0.0f)
-    , hasValidWaveform_(false)
     {
         setOpaque(true);
     }
@@ -20,7 +17,7 @@ namespace rp::uicore
         g.setColour(juce::Colour(60, 60, 60));
         g.drawRect(getLocalBounds(), 1);
 
-        if (hasValidWaveform_)
+        if (!waveformData_.empty())
         {
             paintWaveform(g);
             if (playbackPositionRatio_.has_value())
@@ -40,12 +37,9 @@ namespace rp::uicore
     }
 
 
-    void Waveform::setWaveformData(const std::vector<std::vector<float>>& waveformData, float durationInSeconds)
+    void Waveform::setWaveformData(const std::vector<std::vector<float>>& waveformData)
     {
         waveformData_ = waveformData;
-        numChannels_ = static_cast<int>(waveformData.size());
-        durationInSeconds_ = durationInSeconds;
-        hasValidWaveform_ = !waveformData_.empty() && numChannels_ > 0;
         repaint();
     }
 
@@ -57,22 +51,18 @@ namespace rp::uicore
 
     void Waveform::paintWaveform(juce::Graphics& g)
     {
-        if (waveformData_.empty() || numChannels_ == 0)
+        if (waveformData_.empty())
             return;
 
         const auto bounds = getLocalBounds().toFloat();
 
-        if (numChannels_ == 1)
+        if (waveformData_.size() == 1)
         {
             paintMonoWaveform(g, bounds);
         }
-        else if (numChannels_ == 2)
+        else if (waveformData_.size() == 2)
         {
             paintStereoWaveform(g, bounds);
-        }
-        else
-        {
-            paintMonoWaveform(g, bounds);
         }
     }
 

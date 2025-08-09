@@ -14,7 +14,7 @@ namespace rp::uicore
         Waveform();
         ~Waveform() override = default;
 
-        void setWaveformData(const std::vector<std::vector<float>>& waveformData, float durationInSeconds = 0.0f);
+        void setWaveformData(const std::vector<std::vector<float>>& waveformData);
 
         void setPlaybackPosition(std::optional<float> positionRatio);
 
@@ -31,10 +31,6 @@ namespace rp::uicore
         void paintPlaybackPosition(juce::Graphics& g);
 
         std::vector<std::vector<float>> waveformData_;
-        int numChannels_;
-        float durationInSeconds_;
-        bool hasValidWaveform_;
-
         std::optional<float> playbackPositionRatio_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Waveform)
