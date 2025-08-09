@@ -9,13 +9,6 @@ namespace rp::uicore
     : numChannels_(0)
     , durationInSeconds_(0.0f)
     , hasValidWaveform_(false)
-    , hasSelection_(false)
-    , selectionStartRatio_(0.0f)
-    , selectionEndRatio_(0.0f)
-    , isSelecting_(false)
-    , playbackPositionRatio_(0.0f)
-    , selectionEnabled_(true)
-    , playbackPositionVisible_(true)
     {
         setOpaque(true);
     }
@@ -30,10 +23,8 @@ namespace rp::uicore
         if (hasValidWaveform_)
         {
             paintWaveform(g);
-            paintSelection(g);
-            if (playbackPositionVisible_)
+            if (playbackPositionRatio_.has_value())
                 paintPlaybackPosition(g);
-            paintTimeMarkers(g);
         }
         else
         {
@@ -48,55 +39,8 @@ namespace rp::uicore
         repaint();
     }
 
-    void Waveform::mouseDown(const juce::MouseEvent& event)
-    {
-        if (!hasValidWaveform_ || !selectionEnabled_)
-            return;
 
-        isSelecting_ = true;
-
-        const auto normalizedX = static_cast<float>(event.x) / static_cast<float>(getWidth());
-        listeners_.call([normalizedX](Listener& l) {
-            l.waveformSelectionStarted(normalizedX);
-        });
-    }
-
-    void Waveform::mouseDrag(const juce::MouseEvent& event)
-    {
-        if (!isSelecting_ || !hasValidWaveform_ || !selectionEnabled_)
-            return;
-
-        const auto normalizedX = static_cast<float>(event.x) / static_cast<float>(getWidth());
-        listeners_.call([normalizedX](Listener& l) {
-            l.waveformSelectionDragged(normalizedX);
-        });
-    }
-
-    void Waveform::mouseUp(const juce::MouseEvent& event)
-    {
-        if (!isSelecting_)
-            return;
-
-        isSelecting_ = false;
-
-        const auto normalizedX = static_cast<float>(event.x) / static_cast<float>(getWidth());
-        listeners_.call([normalizedX](Listener& l) {
-            l.waveformSelectionEnded(normalizedX);
-        });
-    }
-
-    void Waveform::addListener(Listener* listener)
-    {
-        listeners_.add(listener);
-    }
-
-    void Waveform::removeListener(Listener* listener)
-    {
-        listeners_.remove(listener);
-    }
-
-    void Waveform::setWaveformData(const std::vector<std::vector<float>>& waveformData,
-                                   float durationInSeconds)
+    void Waveform::setWaveformData(const std::vector<std::vector<float>>& waveformData, float durationInSeconds)
     {
         waveformData_ = waveformData;
         numChannels_ = static_cast<int>(waveformData.size());
@@ -105,47 +49,9 @@ namespace rp::uicore
         repaint();
     }
 
-    void Waveform::clearWaveform()
-    {
-        waveformData_.clear();
-        numChannels_ = 0;
-        durationInSeconds_ = 0.0f;
-        hasValidWaveform_ = false;
-        playbackPositionRatio_ = 0.0f;
-        clearSelection();
-        repaint();
-    }
-
-    void Waveform::setSelection(float startRatio, float endRatio)
-    {
-        selectionStartRatio_ = std::min(startRatio, endRatio);
-        selectionEndRatio_ = std::max(startRatio, endRatio);
-        hasSelection_ = (selectionEndRatio_ > selectionStartRatio_);
-        repaint();
-    }
-
-    void Waveform::clearSelection()
-    {
-        hasSelection_ = false;
-        selectionStartRatio_ = 0.0f;
-        selectionEndRatio_ = 0.0f;
-        repaint();
-    }
-
-    void Waveform::setPlaybackPosition(float positionRatio)
+    void Waveform::setPlaybackPosition(std::optional<float> positionRatio)
     {
         playbackPositionRatio_ = positionRatio;
-        repaint();
-    }
-
-    void Waveform::setSelectionEnabled(bool enabled)
-    {
-        selectionEnabled_ = enabled;
-    }
-
-    void Waveform::setPlaybackPositionVisible(bool visible)
-    {
-        playbackPositionVisible_ = visible;
         repaint();
     }
 
@@ -285,108 +191,17 @@ namespace rp::uicore
         g.fillPath(waveformPath);
     }
 
-    void Waveform::paintSelection(juce::Graphics& g)
-    {
-        if (!hasSelection_)
-            return;
-
-        const auto bounds = getLocalBounds().toFloat();
-        const auto width = bounds.getWidth();
-        const auto startX = selectionStartRatio_ * width;
-        const auto endX = selectionEndRatio_ * width;
-        const auto selectionWidth = endX - startX;
-
-        if (selectionWidth < 1.0f)
-            return;
-
-        const auto selectionBounds = juce::Rectangle<float>(startX, 0.0f, selectionWidth, bounds.getHeight());
-
-        g.setColour(juce::Colours::yellow.withAlpha(0.3f));
-        g.fillRect(selectionBounds);
-
-        g.setColour(juce::Colours::yellow.withAlpha(0.6f));
-        g.drawRect(selectionBounds, 1.0f);
-    }
-
-    void Waveform::paintTimeMarkers(juce::Graphics& g)
-    {
-        if (durationInSeconds_ <= 0.0f)
-            return;
-
-        const auto bounds = getLocalBounds();
-        const auto width = bounds.getWidth();
-        const auto height = bounds.getHeight();
-
-        g.setColour(juce::Colours::white.withAlpha(0.9f));
-        g.setFont(juce::FontOptions(14.0f));
-
-        const auto leftTime = juce::String(0.0f, 1) + "s";
-        const auto middleTime = juce::String(durationInSeconds_ * 0.5f, 1) + "s";
-        const auto rightTime = juce::String(durationInSeconds_, 1) + "s";
-
-        const auto textHeight = 16;
-        const auto yPosition = height - textHeight - 3;
-        const auto margin = 5;
-
-        juce::GlyphArrangement glyphs;
-
-        glyphs.addLineOfText(g.getCurrentFont(), leftTime, 0.0f, 0.0f);
-        const auto leftTextWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, true).getWidth()) + 4;
-        g.drawText(leftTime, margin, yPosition, leftTextWidth, textHeight, juce::Justification::left);
-
-        glyphs.clear();
-        glyphs.addLineOfText(g.getCurrentFont(), middleTime, 0.0f, 0.0f);
-        const auto middleTextWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, true).getWidth()) + 4;
-        g.drawText(middleTime, (width - middleTextWidth) / 2, yPosition, middleTextWidth, textHeight,
-                   juce::Justification::centred);
-
-        glyphs.clear();
-        glyphs.addLineOfText(g.getCurrentFont(), rightTime, 0.0f, 0.0f);
-        const auto rightTextWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, true).getWidth()) + 4;
-        g.drawText(rightTime, width - rightTextWidth - margin, yPosition, rightTextWidth, textHeight,
-                   juce::Justification::right);
-    }
 
     void Waveform::paintPlaybackPosition(juce::Graphics& g)
     {
-        if (playbackPositionRatio_ <= 0.0f)
+        if (!playbackPositionRatio_.has_value() || playbackPositionRatio_.value() <= 0.0f)
             return;
 
         const auto bounds = getLocalBounds();
         const auto width = bounds.getWidth();
         const auto height = bounds.getHeight();
 
-        float playbackX;
-
-        if (hasSelection_)
-        {
-            // DEBUG: Let's see what values we're working with
-            const auto selectionStart = selectionStartRatio_ * width;
-            const auto selectionEnd = selectionEndRatio_ * width;
-            const auto selectionWidth = selectionEnd - selectionStart;
-
-            // The problem might be that playbackPositionRatio_ is still global position
-            // Let's try a different approach: if playbackPositionRatio_ is global,
-            // we need to check if it's within selection bounds and remap it
-
-            if (playbackPositionRatio_ >= selectionStartRatio_ && playbackPositionRatio_ <= selectionEndRatio_)
-            {
-                // playbackPositionRatio_ appears to be global - remap to selection
-                const auto globalToSelectionRatio =
-                    (playbackPositionRatio_ - selectionStartRatio_) / (selectionEndRatio_ - selectionStartRatio_);
-                playbackX = selectionStart + (globalToSelectionRatio * selectionWidth);
-            }
-            else
-            {
-                // Assume it's already selection-relative (original logic)
-                playbackX = selectionStart + (playbackPositionRatio_ * selectionWidth);
-            }
-        }
-        else
-        {
-            // For full waveform playback
-            playbackX = playbackPositionRatio_ * width;
-        }
+        const auto playbackX = playbackPositionRatio_.value() * width;
 
         g.setColour(juce::Colours::red.withAlpha(0.8f));
         g.drawLine(playbackX, 0.0f, playbackX, static_cast<float>(height), 2.0f);
