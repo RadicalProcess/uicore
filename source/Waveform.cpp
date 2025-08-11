@@ -1,11 +1,11 @@
 #include "UICore/Waveform.h"
 
-#include <algorithm>
-
 namespace rp::uicore
 {
 
     Waveform::Waveform()
+    : playheadPositionRatio_(0.0f)
+    , playheadVisibility_(false)
     {
         setOpaque(true);
     }
@@ -20,7 +20,7 @@ namespace rp::uicore
         if (!waveformData_.empty())
         {
             paintWaveform(g);
-            if (playbackPositionRatio_.has_value())
+            if (playheadVisibility_)
                 paintPlaybackPosition(g);
         }
         else
@@ -43,9 +43,15 @@ namespace rp::uicore
         repaint();
     }
 
-    void Waveform::setPlaybackPosition(std::optional<float> positionRatio)
+    void Waveform::setPlayheadPosition(float positionRatio)
     {
-        playbackPositionRatio_ = positionRatio;
+        playheadPositionRatio_ = positionRatio;
+        repaint();
+    }
+
+    void Waveform::setPlayheadVisibility(bool visibility)
+    {
+        playheadVisibility_ = visibility;
         repaint();
     }
 
@@ -181,18 +187,12 @@ namespace rp::uicore
         g.fillPath(waveformPath);
     }
 
-
-    void Waveform::paintPlaybackPosition(juce::Graphics& g)
+    void Waveform::paintPlaybackPosition(juce::Graphics& g) const
     {
-        if (!playbackPositionRatio_.has_value() || playbackPositionRatio_.value() <= 0.0f)
-            return;
-
         const auto bounds = getLocalBounds();
         const auto width = bounds.getWidth();
         const auto height = bounds.getHeight();
-
-        const auto playbackX = playbackPositionRatio_.value() * width;
-
+        const auto playbackX = playheadPositionRatio_ * width;
         g.setColour(juce::Colours::red.withAlpha(0.8f));
         g.drawLine(playbackX, 0.0f, playbackX, static_cast<float>(height), 2.0f);
     }
