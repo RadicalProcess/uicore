@@ -112,7 +112,7 @@ namespace rp::uicore
         }
 
         waveformPath.closeSubPath();
-        g.fillPath(waveformPath);
+        g.strokePath(waveformPath, juce::PathStrokeType(1.0f));
 
         g.setColour(juce::Colour(150, 220, 255));
         g.drawLine(0.0f, centerY, width, centerY, 1.0f);
@@ -184,7 +184,7 @@ namespace rp::uicore
         }
 
         waveformPath.closeSubPath();
-        g.fillPath(waveformPath);
+        g.strokePath(waveformPath, juce::PathStrokeType(1.0f));
     }
 
     void Waveform::paintPlaybackPosition(juce::Graphics& g) const

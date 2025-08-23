@@ -98,7 +98,7 @@ namespace rp::uicore
 
             g.setFont(getRobotoCondensed());
             g.setColour(styles::text);
-            g.drawText(rotaryRange_.getStart() == angle_ ? "-inf" : juce::String(value), rect, juce::Justification::centred, false);
+            g.drawText(std::abs(rotaryRange_.getStart() - angle_) < 0.00001f ? "-inf" : juce::String(value), rect, juce::Justification::centred, false);
             rect.setY(radius_ * 2.0f - 10.0f);
             g.setFont(13.0f);
             g.drawText(juce::String(unit_), rect, juce::Justification::centred, false);
