@@ -1,4 +1,5 @@
 #include "UICore/Waveform.h"
+#include "UICore/Style.h"
 
 namespace rp::uicore
 {
@@ -35,7 +36,6 @@ namespace rp::uicore
     {
         repaint();
     }
-
 
     void Waveform::setWaveformData(const std::vector<std::vector<float>>& waveformData)
     {
@@ -156,12 +156,11 @@ namespace rp::uicore
         const auto width = bounds.getWidth();
 
         g.setColour(colour);
-
-        juce::Path waveformPath;
+        auto waveformPath = juce::Path();
 
         for (size_t i = 0; i < channelData.size(); ++i)
         {
-            const auto x = (static_cast<float>(i) / static_cast<float>(channelData.size() - 1)) * width;
+            const auto x = static_cast<float>(i) / static_cast<float>(channelData.size() - 1) * width;
             const auto amplitude = channelData[i] * maxAmplitude;
             const auto yTop = centerY - amplitude;
 
@@ -193,7 +192,7 @@ namespace rp::uicore
         const auto width = bounds.getWidth();
         const auto height = bounds.getHeight();
         const auto playbackX = playheadPositionRatio_ * width;
-        g.setColour(juce::Colours::red.withAlpha(0.8f));
+        g.setColour(styles::highlight);
         g.drawLine(playbackX, 0.0f, playbackX, static_cast<float>(height), 2.0f);
     }
 

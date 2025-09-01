@@ -3,6 +3,7 @@ add_subdirectory(UITestApp)
 
 add_library(UICore
         source/Font.cpp
+        source/ComboBox.cpp
         source/StepSlider.cpp
         source/Keyboard.cpp
         source/Waveform.cpp
