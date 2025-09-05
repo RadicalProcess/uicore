@@ -23,11 +23,6 @@ namespace rp::uicore
         void resized() override;
 
         void paintWaveform(juce::Graphics& g);
-        void paintMonoWaveform(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-        void paintStereoWaveform(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-        void paintChannelWaveform(juce::Graphics& g, const std::vector<float>& channelData,
-                                  const juce::Rectangle<float>& bounds, float centerY, float maxAmplitude,
-                                  const juce::Colour& colour);
         void paintPlaybackPosition(juce::Graphics& g) const;
 
         std::vector<std::vector<float>> waveformData_;
