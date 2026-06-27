@@ -4,6 +4,7 @@ add_library(UICore
         source/StepSlider.cpp
         source/Keyboard.cpp
         source/Waveform.cpp
+        source/OpenGLView.cpp
         source/ImageToggleButton.cpp
         source/GlissonSlider/HorizontalKnob.cpp
         source/GlissonSlider/VerticalKnob.cpp
@@ -28,6 +29,7 @@ juce_add_binary_data(UIResource
 target_link_libraries(UICore
         PUBLIC
         UIResource
-        juce::juce_gui_basics)
+        juce::juce_gui_basics
+        juce::juce_opengl)
 
 target_compile_features(UICore PUBLIC cxx_std_17)
