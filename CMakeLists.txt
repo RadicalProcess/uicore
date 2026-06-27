@@ -1,6 +1,3 @@
-add_subdirectory(UITestApp)
-
-
 add_library(UICore
         source/Font.cpp
         source/ComboBox.cpp
