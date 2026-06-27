@@ -59,11 +59,10 @@ into `rp::UICore`, so consumers automatically get them.
 
 ## Test application
 
-The [`UITestApp/`](UITestApp/) directory contains **UITest**, a small JUCE GUI
-application that demonstrates and exercises the components. It is added
-automatically by the top-level `CMakeLists.txt`. Like the library, it expects
-JUCE (`juce_gui_extra`, recommended config/warning/LTO flags) to be provided by
-the parent project.
+**UITest**, a small JUCE GUI application that demonstrates and exercises the
+components, lives in a separate repository:
+[RadicalProcess/uitester](https://github.com/RadicalProcess/uitester). It
+consumes this library as a submodule and brings its own copy of JUCE.
 
 ## Requirements
 
