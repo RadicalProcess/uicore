@@ -117,12 +117,20 @@ namespace rp::uicore
             return;
 
         selectionEnabled_ = enabled;
+
+        // Disabling drops any cached selection so a later re-enable starts from
+        // a clean slate rather than re-exposing a stale region.
         if (!selectionEnabled_)
             clearSelection();
     }
 
     void Waveform::setSelection(float startRatio, float endRatio)
     {
+        // The programmatic setter is also gated: when selection is disabled the
+        // component holds no region at all.
+        if (!selectionEnabled_)
+            return;
+
         const auto clampedStart = std::clamp(startRatio, 0.0f, 1.0f);
         const auto clampedEnd = std::clamp(endRatio, 0.0f, 1.0f);
 

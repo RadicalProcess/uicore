@@ -31,7 +31,8 @@ namespace rp::uicore
         void setSelectionEnabled(bool enabled);
 
         // Programmatically set the selection. Both arguments are ratios in the
-        // range 0..1; they are clamped and ordered so that start <= end.
+        // range 0..1; they are clamped and ordered so that start <= end. Has no
+        // effect while selection is disabled (see setSelectionEnabled).
         void setSelection(float startRatio, float endRatio);
 
         void clearSelection();
