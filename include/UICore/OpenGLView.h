@@ -11,6 +11,8 @@ namespace rp::uicore
     // An OpenGL component that renders a cube standing on a reference floor grid.
     // The camera orbits the cube: horizontal mouse drags rotate around it, while
     // vertical drags raise or lower the camera within a fixed elevation range.
+    // The mouse wheel, or a Ctrl + vertical drag, zooms the camera in and out
+    // towards the central cube within a fixed distance range.
     class OpenGLView : public juce::Component,
                        private juce::OpenGLRenderer
     {
@@ -25,6 +27,9 @@ namespace rp::uicore
     private:
         void mouseDown(const juce::MouseEvent& event) override;
         void mouseDrag(const juce::MouseEvent& event) override;
+        void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
+
+        void zoomBy(float amount);
 
         void buildGeometry();
 
