@@ -1,29 +1,52 @@
 #include "UICore/Waveform.h"
 #include "UICore/Style.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace rp::uicore
 {
 
     namespace
     {
+        // Each waveform is drawn as a series of evenly spaced vertical lines.
+        // lineWidth_ is the thickness of one line, lineStride_ is the horizontal
+        // distance between the start of one line and the next (line + gap).
+        const auto lineWidth_ = 1.0f;
+        const auto lineStride_ = 3.0f;
+
         void paintChannelWaveform(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, const juce::Colour& color)
         {
-            const auto width = bounds.getWidth();
-            const auto height = bounds.getHeight();
-            const auto centerY = height * 0.5f;
-            const auto maxAmplitude = centerY;
-            const auto numSamples = std::min(static_cast<size_t>(width), channelData.size());
+            if (channelData.empty())
+                return;
+
+            const auto centerY = bounds.getCentreY();
+            const auto maxAmplitude = bounds.getHeight() * 0.5f;
+            const auto numLines = static_cast<size_t>(bounds.getWidth() / lineStride_);
+
+            if (numLines == 0)
+                return;
 
             g.setColour(color);
 
-            auto waveformPath = juce::Path();
-            for (auto i = static_cast<size_t>(0); i < numSamples; ++i)
+            for (auto i = static_cast<size_t>(0); i < numLines; ++i)
             {
-                const auto amplitude = channelData[i] * maxAmplitude;
-                const auto yTop = centerY - amplitude + bounds.getY();
-                i == 0 ? waveformPath.startNewSubPath(static_cast<float>(i), yTop) : waveformPath.lineTo(static_cast<float>(i), yTop);
+                // Map this line to a contiguous bucket of samples and take the
+                // loudest magnitude in it, so the line length reflects the peak
+                // of the audio it represents rather than a single sample.
+                const auto bucketStart = i * channelData.size() / numLines;
+                const auto bucketEnd = std::max(bucketStart + 1, (i + 1) * channelData.size() / numLines);
+
+                auto peak = 0.0f;
+                for (auto s = bucketStart; s < bucketEnd && s < channelData.size(); ++s)
+                    peak = std::max(peak, std::abs(channelData[s]));
+
+                // Half-length above and below the centre line: peak (0..1) scaled
+                // to half the available height. Total line length = 2 * halfLength.
+                const auto halfLength = peak * maxAmplitude;
+                const auto x = bounds.getX() + static_cast<float>(i) * lineStride_;
+                g.drawLine(x, centerY - halfLength, x, centerY + halfLength, lineWidth_);
             }
-            g.strokePath(waveformPath, juce::PathStrokeType(1.0f));
         }
     }
 
@@ -84,9 +107,10 @@ namespace rp::uicore
             return;
 
         auto bounds = getLocalBounds().toFloat();
+        const auto channelColor = styles::foreground;
         if (waveformData_.size() == 1)
         {
-            paintChannelWaveform(g, waveformData_[0], bounds, juce::Colour(100, 200, 255));
+            paintChannelWaveform(g, waveformData_[0], bounds, channelColor);
         }
         else if (waveformData_.size() == 2)
         {
@@ -94,8 +118,8 @@ namespace rp::uicore
             const auto leftChannelBounds = bounds.removeFromTop(halfHeight);
             const auto rightChannelBounds = bounds;
 
-            paintChannelWaveform(g, waveformData_[0], leftChannelBounds, juce::Colour(100, 200, 255));
-            paintChannelWaveform(g, waveformData_[1], rightChannelBounds, juce::Colour(255, 150, 100));
+            paintChannelWaveform(g, waveformData_[0], leftChannelBounds, channelColor);
+            paintChannelWaveform(g, waveformData_[1], rightChannelBounds, channelColor);
         }
     }
 
