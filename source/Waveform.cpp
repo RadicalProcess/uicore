@@ -15,6 +15,10 @@ namespace rp::uicore
         const auto lineWidth_ = 1.0f;
         const auto lineStride_ = 3.0f;
 
+        // Alpha applied to the highlight colour for the translucent selection
+        // overlay drawn on top of the waveform.
+        const auto selectionAlpha_ = 0.3f;
+
         void paintChannelWaveform(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, const juce::Colour& color)
         {
             if (channelData.empty())
@@ -53,6 +57,10 @@ namespace rp::uicore
     Waveform::Waveform()
     : playheadPositionRatio_(0.0f)
     , playheadVisibility_(false)
+    , selectionEnabled_(false)
+    , selectionStartRatio_(0.0f)
+    , selectionEndRatio_(0.0f)
+    , hasSelection_(false)
     {
         setOpaque(true);
     }
@@ -67,6 +75,8 @@ namespace rp::uicore
         if (!waveformData_.empty())
         {
             paintWaveform(g);
+            if (hasSelection_)
+                paintSelection(g);
             if (playheadVisibility_)
                 paintPlaybackPosition(g);
         }
@@ -101,6 +111,105 @@ namespace rp::uicore
         repaint();
     }
 
+    void Waveform::setSelectionEnabled(bool enabled)
+    {
+        if (selectionEnabled_ == enabled)
+            return;
+
+        selectionEnabled_ = enabled;
+        if (!selectionEnabled_)
+            clearSelection();
+    }
+
+    void Waveform::setSelection(float startRatio, float endRatio)
+    {
+        const auto clampedStart = std::clamp(startRatio, 0.0f, 1.0f);
+        const auto clampedEnd = std::clamp(endRatio, 0.0f, 1.0f);
+
+        selectionStartRatio_ = std::min(clampedStart, clampedEnd);
+        selectionEndRatio_ = std::max(clampedStart, clampedEnd);
+        hasSelection_ = true;
+
+        notifySelectionChanged();
+        repaint();
+    }
+
+    void Waveform::clearSelection()
+    {
+        if (!hasSelection_)
+            return;
+
+        hasSelection_ = false;
+        selectionStartRatio_ = 0.0f;
+        selectionEndRatio_ = 0.0f;
+
+        notifySelectionChanged();
+        repaint();
+    }
+
+    bool Waveform::hasSelection() const
+    {
+        return hasSelection_;
+    }
+
+    float Waveform::getSelectionStart() const
+    {
+        return selectionStartRatio_;
+    }
+
+    float Waveform::getSelectionEnd() const
+    {
+        return selectionEndRatio_;
+    }
+
+    void Waveform::mouseDown(const juce::MouseEvent& event)
+    {
+        if (!selectionEnabled_)
+            return;
+
+        // Begin a new selection anchored at the click position. Until the user
+        // drags, start and end are identical (an empty selection).
+        const auto ratio = ratioForX(event.x);
+        selectionStartRatio_ = ratio;
+        selectionEndRatio_ = ratio;
+        hasSelection_ = true;
+
+        notifySelectionChanged();
+        repaint();
+    }
+
+    void Waveform::mouseDrag(const juce::MouseEvent& event)
+    {
+        if (!selectionEnabled_)
+            return;
+
+        // Extend the selection to the current pointer position. The drag may go
+        // either side of the anchor, so order the ratios when reporting.
+        selectionEndRatio_ = ratioForX(event.x);
+
+        notifySelectionChanged();
+        repaint();
+    }
+
+    void Waveform::mouseUp(const juce::MouseEvent& event)
+    {
+        if (!selectionEnabled_)
+            return;
+
+        // A click without a drag leaves an empty (zero-width) selection, which
+        // is not a useful region; treat it as clearing the selection.
+        if (selectionStartRatio_ == selectionEndRatio_)
+        {
+            clearSelection();
+            return;
+        }
+
+        selectionEndRatio_ = ratioForX(event.x);
+
+        notifySelectionChanged();
+        repaint();
+    }
+
     void Waveform::paintWaveform(juce::Graphics& g)
     {
         if (waveformData_.empty())
@@ -131,5 +240,47 @@ namespace rp::uicore
         const auto playbackX = playheadPositionRatio_ * width;
         g.setColour(styles::highlight);
         g.drawLine(playbackX, 0.0f, playbackX, static_cast<float>(height), 2.0f);
+    }
+
+    void Waveform::paintSelection(juce::Graphics& g) const
+    {
+        const auto bounds = getLocalBounds().toFloat();
+        const auto width = bounds.getWidth();
+
+        // Order the ratios so the overlay is drawn correctly regardless of the
+        // drag direction.
+        const auto startRatio = std::min(selectionStartRatio_, selectionEndRatio_);
+        const auto endRatio = std::max(selectionStartRatio_, selectionEndRatio_);
+
+        const auto startX = bounds.getX() + startRatio * width;
+        const auto endX = bounds.getX() + endRatio * width;
+
+        const auto selectionBounds = juce::Rectangle<float>(startX, bounds.getY(), endX - startX, bounds.getHeight());
+
+        g.setColour(styles::highlight.withAlpha(selectionAlpha_));
+        g.fillRect(selectionBounds);
+
+        g.setColour(styles::highlight);
+        g.drawLine(startX, bounds.getY(), startX, bounds.getBottom(), 1.0f);
+        g.drawLine(endX, bounds.getY(), endX, bounds.getBottom(), 1.0f);
+    }
+
+    float Waveform::ratioForX(int x) const
+    {
+        const auto width = getLocalBounds().getWidth();
+        if (width <= 0)
+            return 0.0f;
+
+        return std::clamp(static_cast<float>(x) / static_cast<float>(width), 0.0f, 1.0f);
+    }
+
+    void Waveform::notifySelectionChanged() const
+    {
+        if (!onSelectionChanged)
+            return;
+
+        const auto startRatio = std::min(selectionStartRatio_, selectionEndRatio_);
+        const auto endRatio = std::max(selectionStartRatio_, selectionEndRatio_);
+        onSelectionChanged(startRatio, endRatio);
     }
 }

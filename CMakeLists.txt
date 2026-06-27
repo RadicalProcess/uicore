@@ -4,7 +4,6 @@ add_library(UICore
         source/StepSlider.cpp
         source/Keyboard.cpp
         source/Waveform.cpp
-        source/WaveformSelector.cpp
         source/OpenGLView.cpp
         source/ImageToggleButton.cpp
         source/GlissonSlider/HorizontalKnob.cpp
