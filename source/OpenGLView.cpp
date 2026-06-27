@@ -15,6 +15,10 @@ namespace rp::uicore
         constexpr float minElevation = -60.0f;
         constexpr float maxElevation = 60.0f;
         constexpr float orbitSensitivity = 0.4f;
+        constexpr float minDistance = 3.0f;
+        constexpr float maxDistance = 20.0f;
+        constexpr float wheelZoomSensitivity = 4.0f;
+        constexpr float dragZoomSensitivity = 0.02f;
 
         using Mat4 = std::array<float, 16>;
 
@@ -319,11 +323,29 @@ namespace rp::uicore
         const auto deltaY = static_cast<float>(position.getY() - lastDragPosition_.getY());
         lastDragPosition_ = position;
 
+        // Ctrl + vertical drag zooms; a plain drag orbits the camera.
+        if (event.mods.isCtrlDown())
+        {
+            zoomBy(deltaY * dragZoomSensitivity);
+            return;
+        }
+
         cameraAzimuth_ -= degreesToRadians(deltaX * orbitSensitivity);
 
         const auto newElevation = cameraElevation_ + degreesToRadians(deltaY * orbitSensitivity);
         cameraElevation_ = juce::jlimit(degreesToRadians(minElevation), degreesToRadians(maxElevation), newElevation);
 
+        openGLContext_.triggerRepaint();
+    }
+
+    void OpenGLView::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& wheel)
+    {
+        zoomBy(-wheel.deltaY * wheelZoomSensitivity);
+    }
+
+    void OpenGLView::zoomBy(float amount)
+    {
+        cameraDistance_ = juce::jlimit(minDistance, maxDistance, cameraDistance_ + amount);
         openGLContext_.triggerRepaint();
     }
 
