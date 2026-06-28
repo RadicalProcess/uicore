@@ -325,7 +325,6 @@ namespace rp::uicore
             if (handle != FadeHandle::None)
             {
                 activeFadeHandle_ = handle;
-                setMouseCursor(juce::MouseCursor::DraggingHandCursor);
                 return;
             }
         }
@@ -393,11 +392,6 @@ namespace rp::uicore
         if (activeFadeHandle_ != FadeHandle::None)
         {
             activeFadeHandle_ = FadeHandle::None;
-
-            // Restore the hover cursor for wherever the pointer ended up.
-            const auto overHandle = fadeHandleAt(event.getPosition()) != FadeHandle::None;
-            setMouseCursor(overHandle ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
-
             notifyFadeChanged();
             return;
         }
@@ -417,22 +411,6 @@ namespace rp::uicore
 
         notifySelectionChanged();
         repaint();
-    }
-
-    void Waveform::mouseMove(const juce::MouseEvent& event)
-    {
-        if (!fadeHandlesVisible())
-            return;
-
-        // Hovering a handle previews that it is grabbable with a hand cursor.
-        const auto overHandle = fadeHandleAt(event.getPosition()) != FadeHandle::None;
-        setMouseCursor(overHandle ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
-    }
-
-    void Waveform::mouseExit(const juce::MouseEvent&)
-    {
-        if (activeFadeHandle_ == FadeHandle::None)
-            setMouseCursor(juce::MouseCursor::NormalCursor);
     }
 
     void Waveform::paintWaveform(juce::Graphics& g)
