@@ -19,19 +19,42 @@ namespace rp::uicore
         // overlay drawn on top of the waveform.
         const auto selectionAlpha_ = 0.3f;
 
-        void paintChannelWaveform(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, const juce::Colour& color)
+        // The peak vertical-line rendering loses meaning once only a handful of
+        // samples map to each pixel, so the renderer switches mode based on the
+        // samples-per-pixel (SPP) ratio:
+        //   SPP <= connectedLineMaxSpp_ : draw a connected line through samples.
+        //   SPP <  sampleDotMaxSpp_     : mark each individual sample with a dot,
+        //                                 so samples and the interpolation
+        //                                 between them are distinguishable.
+        const auto connectedLineMaxSpp_ = 2.0f;
+        const auto sampleDotMaxSpp_ = 8.0f;
+        const auto sampleDotRadius_ = 2.0f;
+
+        // Horizontal position of a sample, spreading the samples evenly across
+        // the full width so the first and last samples sit on the edges.
+        float sampleX(const juce::Rectangle<float>& bounds, size_t index, size_t numSamples)
         {
-            if (channelData.empty())
-                return;
+            if (numSamples <= 1)
+                return bounds.getX();
 
-            const auto centerY = bounds.getCentreY();
-            const auto maxAmplitude = bounds.getHeight() * 0.5f;
+            return bounds.getX() + bounds.getWidth() * static_cast<float>(index) / static_cast<float>(numSamples - 1);
+        }
+
+        // Vertical position of a sample value (-1..1) relative to the centre
+        // line, with positive amplitudes drawn upwards.
+        float sampleY(float value, float centerY, float maxAmplitude)
+        {
+            return centerY - value * maxAmplitude;
+        }
+
+        // Peak rendering: one vertical line per pixel column, its length set by
+        // the loudest sample in the bucket it represents. Suited to dense audio
+        // where many samples map to each pixel.
+        void paintPeakBars(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, float centerY, float maxAmplitude)
+        {
             const auto numLines = static_cast<size_t>(bounds.getWidth() / lineStride_);
-
             if (numLines == 0)
                 return;
-
-            g.setColour(color);
 
             for (auto i = static_cast<size_t>(0); i < numLines; ++i)
             {
@@ -51,6 +74,67 @@ namespace rp::uicore
                 const auto x = bounds.getX() + static_cast<float>(i) * lineStride_;
                 g.drawLine(x, centerY - halfLength, x, centerY + halfLength, lineWidth_);
             }
+        }
+
+        // Connected rendering: a polyline through every sample, showing the
+        // actual waveform shape (and the interpolation between samples) when few
+        // samples map to each pixel.
+        void paintConnectedLine(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, float centerY, float maxAmplitude)
+        {
+            const auto numSamples = channelData.size();
+
+            juce::Path path;
+            for (auto i = static_cast<size_t>(0); i < numSamples; ++i)
+            {
+                const auto x = sampleX(bounds, i, numSamples);
+                const auto y = sampleY(channelData[i], centerY, maxAmplitude);
+
+                if (i == 0)
+                    path.startNewSubPath(x, y);
+                else
+                    path.lineTo(x, y);
+            }
+
+            g.strokePath(path, juce::PathStrokeType(lineWidth_));
+        }
+
+        // Draws a small filled dot at each sample position so individual samples
+        // remain visible on top of the connected line.
+        void paintSampleDots(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, float centerY, float maxAmplitude)
+        {
+            const auto numSamples = channelData.size();
+            const auto diameter = sampleDotRadius_ * 2.0f;
+
+            for (auto i = static_cast<size_t>(0); i < numSamples; ++i)
+            {
+                const auto x = sampleX(bounds, i, numSamples);
+                const auto y = sampleY(channelData[i], centerY, maxAmplitude);
+                g.fillEllipse(x - sampleDotRadius_, y - sampleDotRadius_, diameter, diameter);
+            }
+        }
+
+        void paintChannelWaveform(juce::Graphics& g, const std::vector<float>& channelData, const juce::Rectangle<float>& bounds, const juce::Colour& color)
+        {
+            if (channelData.empty())
+                return;
+
+            const auto width = bounds.getWidth();
+            if (width <= 0.0f)
+                return;
+
+            const auto centerY = bounds.getCentreY();
+            const auto maxAmplitude = bounds.getHeight() * 0.5f;
+            const auto samplesPerPixel = static_cast<float>(channelData.size()) / width;
+
+            g.setColour(color);
+
+            if (samplesPerPixel <= connectedLineMaxSpp_)
+                paintConnectedLine(g, channelData, bounds, centerY, maxAmplitude);
+            else
+                paintPeakBars(g, channelData, bounds, centerY, maxAmplitude);
+
+            if (samplesPerPixel < sampleDotMaxSpp_)
+                paintSampleDots(g, channelData, bounds, centerY, maxAmplitude);
         }
     }
 
