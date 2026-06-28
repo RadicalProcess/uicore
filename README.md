@@ -18,7 +18,7 @@ All code lives under the `rp::uicore` namespace and is exported as the CMake tar
 | `StraightSlider` | `UICore/StraightSlider.h` | Linear slider |
 | `TextField` | `UICore/TextField.h` | Styled text editor with custom look-and-feel |
 | `ToggleButton` | `UICore/ToggleButton.h` | Styled toggle button |
-| `Waveform` | `UICore/Waveform.h` | Waveform display with playhead and optional click-and-drag region selection |
+| `Waveform` | `UICore/Waveform.h` | Waveform display with playhead, optional click-and-drag region selection, and optional draggable fade-in/fade-out handles |
 | `GlissonSlider` | `UICore/GlissonSlider/Slider.h` | Two-axis "glisson" slider (under `rp::uicore::glisson`) |
 | `Style` | `UICore/Style.h` | Shared colors / styling constants (`rp::uicore::styles`) |
 | `Utils` | `UICore/Utils.h` | Helper utilities |
