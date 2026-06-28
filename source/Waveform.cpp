@@ -32,15 +32,17 @@ namespace rp::uicore
         // testing, so the small triangles are comfortable to grab.
         const auto fadeHandleHitMargin_ = 4.0f;
 
-        // The peak vertical-line rendering loses meaning once only a handful of
-        // samples map to each pixel, so the renderer switches mode based on the
-        // samples-per-pixel (SPP) ratio:
-        //   SPP <= connectedLineMaxSpp_ : draw a connected line through samples.
-        //   SPP <  sampleDotMaxSpp_     : mark each individual sample with a dot,
-        //                                 so samples and the interpolation
-        //                                 between them are distinguishable.
+        // The renderer draws exactly one of three mutually exclusive
+        // representations, chosen by the samples-per-pixel (SPP) ratio as the
+        // waveform gets denser:
+        //   SPP <= sampleDotMaxSpp_     : connected line WITH a dot per sample.
+        //   SPP <= connectedLineMaxSpp_ : connected line only.
+        //   otherwise                   : peak vertical lines only.
+        // The dot threshold is the smallest of the three so the dots only ever
+        // decorate the connected line and never the peak lines; it is kept low
+        // enough that the dots stay separated rather than merging into a line.
+        const auto sampleDotMaxSpp_ = 0.2f;
         const auto connectedLineMaxSpp_ = 2.0f;
-        const auto sampleDotMaxSpp_ = 8.0f;
         const auto sampleDotRadius_ = 2.0f;
 
         // Horizontal position of a sample, spreading the samples evenly across
@@ -141,12 +143,21 @@ namespace rp::uicore
 
             g.setColour(color);
 
-            if (samplesPerPixel <= connectedLineMaxSpp_)
-                paintConnectedLine(g, channelData, bounds, centerY, maxAmplitude);
-            else
+            // Dense audio collapses to peak vertical lines; nothing is drawn on
+            // top of them so the three representations stay mutually exclusive.
+            if (samplesPerPixel > connectedLineMaxSpp_)
+            {
                 paintPeakBars(g, channelData, bounds, centerY, maxAmplitude);
+                return;
+            }
 
-            if (samplesPerPixel < sampleDotMaxSpp_)
+            // Sparser audio shows its actual shape as a connected line, gaining
+            // a dot per sample only once the samples are sparse enough to read
+            // individually (so going to denser audio drops the dots, not the
+            // line).
+            paintConnectedLine(g, channelData, bounds, centerY, maxAmplitude);
+
+            if (samplesPerPixel <= sampleDotMaxSpp_)
                 paintSampleDots(g, channelData, bounds, centerY, maxAmplitude);
         }
     }
