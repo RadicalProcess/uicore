@@ -20,7 +20,7 @@ namespace rp::uicore
     // segment running from the bottom-left corner to the top-right corner.
     //
     // A segment highlights while the cursor hovers over it. Clicking on a segment
-    // and dragging up or down bends it in that direction with a power function;
+    // and dragging up or down bends it into a symmetric bow in that direction;
     // shift-clicking a segment straightens it again.
     //
     // Nodes are exposed as points normalised to 0..1, with x increasing to the
@@ -96,7 +96,7 @@ namespace rp::uicore
         // width, following the segment's bend.
         juce::Point<float> pointOnSegment(int segment, float fraction) const;
 
-        // Appends segment i to the path, sampling its power curve when bent.
+        // Appends segment i to the path, sampling its bow curve when bent.
         void buildSegmentPath(juce::Path& path, int segment) const;
 
         // Index of the node whose handle contains the given local point, or -1.

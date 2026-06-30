@@ -36,6 +36,11 @@ namespace rp::uicore
         // Height (in pixels) of the numbered reference-line labels.
         const auto referenceLabelHeight_ = 12.0f;
 
+        // Width (in pixels) reserved on the left for a reference-line number,
+        // and the gap kept between that number and where its line starts.
+        const auto referenceLabelWidth_ = 14.0f;
+        const auto referenceLabelGap_ = 4.0f;
+
         // Colour of the reference lines and their labels: dim enough to read as
         // background guides without competing with the curve.
         const auto referenceColour_ = juce::Colour(90, 90, 90);
@@ -47,8 +52,9 @@ namespace rp::uicore
         // Number of straight pieces a bent segment is drawn and hit tested with.
         const auto bendSampleCount_ = 32;
 
-        // Largest exponent of the power curve, reached at a full bend of 1.
-        const auto maxBendExponent_ = 4.0f;
+        // Depth (normalised) of the bow at the segment midpoint for a full bend
+        // of 1.
+        const auto maxBendDepth_ = 0.5f;
 
         // Vertical drag distance (pixels) that moves the bend across its whole
         // -1..1 range.
@@ -56,16 +62,17 @@ namespace rp::uicore
 
         // Vertical offset (normalised) added to a straight segment at fraction f
         // for a signed bend in -1..1. A bend of 0 leaves the segment straight;
-        // the sign chooses the bow direction and the magnitude its depth, shaped
-        // by the power function f - f^exponent.
+        // the sign chooses the bow direction and the magnitude its depth. The
+        // bow is a half sine, so it is symmetric about the midpoint and bends
+        // the segment evenly rather than leaning to one side.
         float bendOffset(float bend, float fraction)
         {
             if (std::abs(bend) < 1.0e-4f)
                 return 0.0f;
 
-            const auto exponent = 1.0f + std::abs(bend) * (maxBendExponent_ - 1.0f);
-            const auto bump = fraction - std::pow(fraction, exponent);
-            return (bend > 0.0f ? 1.0f : -1.0f) * bump;
+            const auto depth = std::abs(bend) * maxBendDepth_;
+            const auto bump = std::sin(juce::MathConstants<float>::pi * fraction);
+            return (bend > 0.0f ? 1.0f : -1.0f) * depth * bump;
         }
     }
 
@@ -184,12 +191,16 @@ namespace rp::uicore
         {
             const auto y = toPixel({ 0.0f, referenceLines_[i] }).y;
 
+            // The number sits in the reserved strip on the left, centred on the
+            // line; the line itself starts just to its right.
+            const auto lineStart = area.getX() + referenceLabelWidth_ + referenceLabelGap_;
+
             g.setColour(referenceColour_);
-            g.drawHorizontalLine(juce::roundToInt(y), area.getX(), area.getRight());
+            g.drawHorizontalLine(juce::roundToInt(y), lineStart, area.getRight());
 
             const auto label = juce::String(static_cast<int>(i) + 1);
-            const auto labelArea = juce::Rectangle<float>(area.getX(), y - referenceLabelHeight_, area.getWidth(), referenceLabelHeight_);
-            g.drawText(label, labelArea, juce::Justification::topLeft, false);
+            const auto labelArea = juce::Rectangle<float>(area.getX(), y - referenceLabelHeight_ * 0.5f, referenceLabelWidth_, referenceLabelHeight_);
+            g.drawText(label, labelArea, juce::Justification::centredRight, false);
         }
 
         // The connecting segments, drawn one at a time so the hovered or bent
