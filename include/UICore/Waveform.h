@@ -1,5 +1,7 @@
 #pragma once
 
+#include "WaveformRenderer.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -87,8 +89,6 @@ namespace rp::uicore
         void mouseDrag(const juce::MouseEvent& event) override;
         void mouseUp(const juce::MouseEvent& event) override;
 
-        void paintWaveform(juce::Graphics& g);
-        void paintPlaybackPosition(juce::Graphics& g) const;
         void paintSelection(juce::Graphics& g) const;
         void paintFades(juce::Graphics& g) const;
 
@@ -105,9 +105,7 @@ namespace rp::uicore
         bool fadeHandlesVisible() const;
         void resetFades();
 
-        std::vector<std::vector<float>> waveformData_;
-        float playheadPositionRatio_;
-        bool playheadVisibility_;
+        WaveformRenderer renderer_;
         bool selectionEnabled_;
         float selectionStartRatio_;
         float selectionEndRatio_;
