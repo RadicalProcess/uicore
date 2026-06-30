@@ -1,5 +1,7 @@
 #pragma once
 
+#include "WaveformRenderer.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -37,6 +39,18 @@ namespace rp::uicore
         // top-right corner.
         void reset();
 
+        // Shows an audio waveform as a faint backdrop behind the curve, drawn in
+        // the same plot area so it shares the node coordinate space. Passing
+        // empty data hides the backdrop. The rendering matches the Waveform
+        // component (see WaveformRenderer).
+        void setWaveformData(const std::vector<std::vector<float>>& waveformData);
+
+        // Position (0..1) and visibility of an optional playhead drawn over the
+        // backdrop. Hidden by default.
+        void setPlayheadPosition(float positionRatio);
+
+        void setPlayheadVisibility(bool visible);
+
         // Invoked whenever the curve changes, either through user interaction or
         // setPoints / reset.
         std::function<void(const std::vector<juce::Point<float>>& points)> onChange;
@@ -70,6 +84,9 @@ namespace rp::uicore
 
         // Index of the node currently being dragged, or -1 when idle.
         int draggedIndex_;
+
+        // Faint waveform (and optional playhead) drawn behind the curve.
+        WaveformRenderer waveformRenderer_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MotionView)
     };

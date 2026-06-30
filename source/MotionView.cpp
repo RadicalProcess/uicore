@@ -23,6 +23,14 @@ namespace rp::uicore
         // Smallest horizontal gap (normalised) kept between a dragged interior
         // node and its neighbours so the nodes never cross and stay ordered.
         const auto minGap_ = 0.001f;
+
+        // Alpha applied to the foreground colour for the translucent waveform
+        // backdrop, kept low so it never competes with the curve drawn on top.
+        const auto backdropWaveformAlpha_ = 0.18f;
+
+        // Alpha applied to the highlight colour for the playhead so it reads as
+        // part of the faint backdrop rather than the editable curve.
+        const auto backdropPlayheadAlpha_ = 0.5f;
     }
 
     MotionView::MotionView()
@@ -80,12 +88,37 @@ namespace rp::uicore
         repaint();
     }
 
+    void MotionView::setWaveformData(const std::vector<std::vector<float>>& waveformData)
+    {
+        waveformRenderer_.setWaveformData(waveformData);
+        repaint();
+    }
+
+    void MotionView::setPlayheadPosition(float positionRatio)
+    {
+        waveformRenderer_.setPlayheadPosition(positionRatio);
+        repaint();
+    }
+
+    void MotionView::setPlayheadVisibility(bool visible)
+    {
+        waveformRenderer_.setPlayheadVisibility(visible);
+        repaint();
+    }
+
     void MotionView::paint(juce::Graphics& g)
     {
         g.fillAll(juce::Colour(30, 30, 30));
 
         g.setColour(juce::Colour(60, 60, 60));
         g.drawRect(getLocalBounds(), 1);
+
+        // The waveform backdrop and playhead are drawn first, into the same plot
+        // area as the curve, so they sit behind the nodes and share their
+        // coordinate space.
+        const auto area = plotArea();
+        waveformRenderer_.paintWaveform(g, area, styles::foreground.withAlpha(backdropWaveformAlpha_));
+        waveformRenderer_.paintPlayhead(g, area, styles::highlight.withAlpha(backdropPlayheadAlpha_));
 
         // The connecting segments.
         juce::Path path;
