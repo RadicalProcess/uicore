@@ -2,6 +2,7 @@
 #include "UICore/Style.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace rp::uicore
 {
@@ -38,10 +39,42 @@ namespace rp::uicore
         // Colour of the reference lines and their labels: dim enough to read as
         // background guides without competing with the curve.
         const auto referenceColour_ = juce::Colour(90, 90, 90);
+
+        // How close (in pixels) the cursor must be to a segment to hover or grab
+        // it for bending.
+        const auto segmentHitMargin_ = 5.0f;
+
+        // Number of straight pieces a bent segment is drawn and hit tested with.
+        const auto bendSampleCount_ = 32;
+
+        // Largest exponent of the power curve, reached at a full bend of 1.
+        const auto maxBendExponent_ = 4.0f;
+
+        // Vertical drag distance (pixels) that moves the bend across its whole
+        // -1..1 range.
+        const auto bendDragSpan_ = 200.0f;
+
+        // Vertical offset (normalised) added to a straight segment at fraction f
+        // for a signed bend in -1..1. A bend of 0 leaves the segment straight;
+        // the sign chooses the bow direction and the magnitude its depth, shaped
+        // by the power function f - f^exponent.
+        float bendOffset(float bend, float fraction)
+        {
+            if (std::abs(bend) < 1.0e-4f)
+                return 0.0f;
+
+            const auto exponent = 1.0f + std::abs(bend) * (maxBendExponent_ - 1.0f);
+            const auto bump = fraction - std::pow(fraction, exponent);
+            return (bend > 0.0f ? 1.0f : -1.0f) * bump;
+        }
     }
 
     MotionView::MotionView()
     : draggedIndex_(-1)
+    , bentIndex_(-1)
+    , hoveredIndex_(-1)
+    , bendDragStartY_(0.0f)
+    , bendDragStartBend_(0.0f)
     {
         setOpaque(true);
         reset();
@@ -50,6 +83,11 @@ namespace rp::uicore
     std::vector<juce::Point<float>> MotionView::getPoints() const
     {
         return points_;
+    }
+
+    std::vector<float> MotionView::getBends() const
+    {
+        return bends_;
     }
 
     void MotionView::setPoints(const std::vector<juce::Point<float>>& points)
@@ -80,7 +118,9 @@ namespace rp::uicore
         sorted.back().x = 1.0f;
 
         points_ = sorted;
+        bends_.assign(points_.size() - 1, 0.0f);
         draggedIndex_ = -1;
+        bentIndex_ = -1;
 
         notifyChange();
         repaint();
@@ -89,7 +129,9 @@ namespace rp::uicore
     void MotionView::reset()
     {
         points_ = { juce::Point<float>(0.0f, 0.0f), juce::Point<float>(1.0f, 1.0f) };
+        bends_ = { 0.0f };
         draggedIndex_ = -1;
+        bentIndex_ = -1;
 
         notifyChange();
         repaint();
@@ -150,19 +192,17 @@ namespace rp::uicore
             g.drawText(label, labelArea, juce::Justification::topLeft, false);
         }
 
-        // The connecting segments.
-        juce::Path path;
-        for (auto i = static_cast<size_t>(0); i < points_.size(); ++i)
+        // The connecting segments, drawn one at a time so the hovered or bent
+        // one can be picked out and so bent segments can follow their curve.
+        for (auto i = 0; i < static_cast<int>(bends_.size()); ++i)
         {
-            const auto pixel = toPixel(points_[i]);
-            if (i == 0)
-                path.startNewSubPath(pixel);
-            else
-                path.lineTo(pixel);
-        }
+            juce::Path path;
+            buildSegmentPath(path, i);
 
-        g.setColour(styles::foreground);
-        g.strokePath(path, juce::PathStrokeType(lineWidth_));
+            const auto highlighted = (i == hoveredIndex_) || (i == bentIndex_);
+            g.setColour(highlighted ? styles::highlight : styles::foreground);
+            g.strokePath(path, juce::PathStrokeType(lineWidth_));
+        }
 
         // The node handles drawn on top: hollow squares whose interior matches
         // the background, with the dragged one picked out in the highlight
@@ -192,13 +232,24 @@ namespace rp::uicore
         const auto position = event.position;
         const auto index = nodeAt(position);
 
-        // Shift-click removes an interior node; the pinned endpoints are left
-        // untouched.
+        // Shift-click removes an interior node, or straightens a hovered segment;
+        // the pinned endpoints are left untouched.
         if (event.mods.isShiftDown())
         {
             if (index >= 0 && !isEndpoint(index))
             {
                 points_.erase(points_.begin() + index);
+                bends_.erase(bends_.begin() + index - 1, bends_.begin() + index + 1);
+                bends_.insert(bends_.begin() + index - 1, 0.0f);
+                notifyChange();
+                repaint();
+                return;
+            }
+
+            const auto segment = segmentAt(position);
+            if (segment >= 0)
+            {
+                bends_[static_cast<size_t>(segment)] = 0.0f;
                 notifyChange();
                 repaint();
             }
@@ -213,8 +264,21 @@ namespace rp::uicore
             return;
         }
 
+        // Clicking on a segment (but not a node) starts bending it.
+        const auto segment = segmentAt(position);
+        if (segment >= 0)
+        {
+            bentIndex_ = segment;
+            hoveredIndex_ = segment;
+            bendDragStartY_ = position.y;
+            bendDragStartBend_ = bends_[static_cast<size_t>(segment)];
+            repaint();
+            return;
+        }
+
         // Clicking empty space inserts a new interior node at the click position,
-        // keeping the nodes sorted by x, and starts dragging it immediately.
+        // keeping the nodes sorted by x, and starts dragging it immediately. The
+        // split segment is replaced by two straight ones.
         const auto normalised = toNormalised(position);
         auto insertAt = static_cast<size_t>(1);
         while (insertAt < points_.size() && points_[insertAt].x < normalised.x)
@@ -224,6 +288,8 @@ namespace rp::uicore
         insertAt = std::clamp(insertAt, static_cast<size_t>(1), points_.size() - 1);
 
         points_.insert(points_.begin() + insertAt, normalised);
+        bends_.erase(bends_.begin() + insertAt - 1);
+        bends_.insert(bends_.begin() + insertAt - 1, 2, 0.0f);
         draggedIndex_ = static_cast<int>(insertAt);
 
         notifyChange();
@@ -232,6 +298,16 @@ namespace rp::uicore
 
     void MotionView::mouseDrag(const juce::MouseEvent& event)
     {
+        // Bending a segment: vertical drag distance becomes the signed bend.
+        if (bentIndex_ >= 0)
+        {
+            const auto delta = (bendDragStartY_ - event.position.y) / bendDragSpan_;
+            bends_[static_cast<size_t>(bentIndex_)] = std::clamp(bendDragStartBend_ + delta, -1.0f, 1.0f);
+            notifyChange();
+            repaint();
+            return;
+        }
+
         if (draggedIndex_ < 0)
             return;
 
@@ -258,10 +334,31 @@ namespace rp::uicore
 
     void MotionView::mouseUp(const juce::MouseEvent&)
     {
-        if (draggedIndex_ < 0)
+        if (draggedIndex_ < 0 && bentIndex_ < 0)
             return;
 
         draggedIndex_ = -1;
+        bentIndex_ = -1;
+        repaint();
+    }
+
+    void MotionView::mouseMove(const juce::MouseEvent& event)
+    {
+        // A segment only highlights when the cursor is not over a node handle.
+        const auto segment = (nodeAt(event.position) >= 0) ? -1 : segmentAt(event.position);
+        if (segment == hoveredIndex_)
+            return;
+
+        hoveredIndex_ = segment;
+        repaint();
+    }
+
+    void MotionView::mouseExit(const juce::MouseEvent&)
+    {
+        if (hoveredIndex_ < 0)
+            return;
+
+        hoveredIndex_ = -1;
         repaint();
     }
 
@@ -292,6 +389,34 @@ namespace rp::uicore
         return { std::clamp(x, 0.0f, 1.0f), std::clamp(y, 0.0f, 1.0f) };
     }
 
+    juce::Point<float> MotionView::pointOnSegment(int segment, float fraction) const
+    {
+        const auto left = points_[static_cast<size_t>(segment)];
+        const auto right = points_[static_cast<size_t>(segment) + 1];
+
+        const auto x = left.x + fraction * (right.x - left.x);
+        const auto straightY = left.y + fraction * (right.y - left.y);
+        const auto y = std::clamp(straightY + bendOffset(bends_[static_cast<size_t>(segment)], fraction), 0.0f, 1.0f);
+
+        return toPixel({ x, y });
+    }
+
+    void MotionView::buildSegmentPath(juce::Path& path, int segment) const
+    {
+        path.startNewSubPath(pointOnSegment(segment, 0.0f));
+
+        // A straight segment needs only its end point; a bent one is approximated
+        // by a series of short lines along the power curve.
+        if (std::abs(bends_[static_cast<size_t>(segment)]) < 1.0e-4f)
+        {
+            path.lineTo(pointOnSegment(segment, 1.0f));
+            return;
+        }
+
+        for (auto step = 1; step <= bendSampleCount_; ++step)
+            path.lineTo(pointOnSegment(segment, static_cast<float>(step) / bendSampleCount_));
+    }
+
     int MotionView::nodeAt(juce::Point<float> point) const
     {
         const auto reach = nodeHalfSize_ + nodeHitMargin_;
@@ -306,6 +431,33 @@ namespace rp::uicore
         }
 
         return -1;
+    }
+
+    int MotionView::segmentAt(juce::Point<float> point) const
+    {
+        auto closest = -1;
+        auto closestDistance = segmentHitMargin_;
+
+        // Each segment is walked as the same short pieces it is drawn with, and
+        // the nearest piece within the hit margin wins.
+        for (auto i = 0; i < static_cast<int>(bends_.size()); ++i)
+        {
+            auto previous = pointOnSegment(i, 0.0f);
+            for (auto step = 1; step <= bendSampleCount_; ++step)
+            {
+                const auto current = pointOnSegment(i, static_cast<float>(step) / bendSampleCount_);
+                juce::Point<float> nearest;
+                const auto distance = juce::Line<float>(previous, current).getDistanceFromPoint(point, nearest);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closest = i;
+                }
+                previous = current;
+            }
+        }
+
+        return closest;
     }
 
     bool MotionView::isEndpoint(int index) const
