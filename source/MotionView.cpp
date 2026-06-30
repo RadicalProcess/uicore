@@ -31,6 +31,13 @@ namespace rp::uicore
         // Alpha applied to the highlight colour for the playhead so it reads as
         // part of the faint backdrop rather than the editable curve.
         const auto backdropPlayheadAlpha_ = 0.5f;
+
+        // Height (in pixels) of the numbered reference-line labels.
+        const auto referenceLabelHeight_ = 12.0f;
+
+        // Colour of the reference lines and their labels: dim enough to read as
+        // background guides without competing with the curve.
+        const auto referenceColour_ = juce::Colour(90, 90, 90);
     }
 
     MotionView::MotionView()
@@ -106,6 +113,15 @@ namespace rp::uicore
         repaint();
     }
 
+    void MotionView::setReferenceLines(const std::vector<float>& linePositions)
+    {
+        referenceLines_ = linePositions;
+        for (auto& position : referenceLines_)
+            position = std::clamp(position, 0.0f, 1.0f);
+
+        repaint();
+    }
+
     void MotionView::paint(juce::Graphics& g)
     {
         g.fillAll(juce::Colour(30, 30, 30));
@@ -113,12 +129,26 @@ namespace rp::uicore
         g.setColour(juce::Colour(60, 60, 60));
         g.drawRect(getLocalBounds(), 1);
 
-        // The waveform backdrop and playhead are drawn first, into the same plot
-        // area as the curve, so they sit behind the nodes and share their
-        // coordinate space.
+        // The backdrop layers, all drawn into the same plot area as the curve so
+        // they share its coordinate space and sit behind the nodes: first the
+        // faint waveform and playhead, then the numbered horizontal reference
+        // lines.
         const auto area = plotArea();
         waveformRenderer_.paintWaveform(g, area, styles::foreground.withAlpha(backdropWaveformAlpha_));
         waveformRenderer_.paintPlayhead(g, area, styles::highlight.withAlpha(backdropPlayheadAlpha_));
+
+        g.setFont(referenceLabelHeight_);
+        for (auto i = static_cast<size_t>(0); i < referenceLines_.size(); ++i)
+        {
+            const auto y = toPixel({ 0.0f, referenceLines_[i] }).y;
+
+            g.setColour(referenceColour_);
+            g.drawHorizontalLine(juce::roundToInt(y), area.getX(), area.getRight());
+
+            const auto label = juce::String(static_cast<int>(i) + 1);
+            const auto labelArea = juce::Rectangle<float>(area.getX(), y - referenceLabelHeight_, area.getWidth(), referenceLabelHeight_);
+            g.drawText(label, labelArea, juce::Justification::topLeft, false);
+        }
 
         // The connecting segments.
         juce::Path path;

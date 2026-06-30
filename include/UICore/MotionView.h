@@ -51,6 +51,13 @@ namespace rp::uicore
 
         void setPlayheadVisibility(bool visible);
 
+        // Sets thin horizontal reference lines drawn behind the curve as visual
+        // guides. Each position is a normalised y value in 0..1 (0 = bottom edge,
+        // 1 = top edge); values are clamped to that range. Every line carries a
+        // numbered label on its left, numbered from 1 in the order given. An
+        // empty vector removes all reference lines.
+        void setReferenceLines(const std::vector<float>& linePositions);
+
         // Invoked whenever the curve changes, either through user interaction or
         // setPoints / reset.
         std::function<void(const std::vector<juce::Point<float>>& points)> onChange;
@@ -81,6 +88,9 @@ namespace rp::uicore
         void notifyChange() const;
 
         std::vector<juce::Point<float>> points_;
+
+        // Normalised y positions (0..1) of the horizontal reference lines.
+        std::vector<float> referenceLines_;
 
         // Index of the node currently being dragged, or -1 when idle.
         int draggedIndex_;
