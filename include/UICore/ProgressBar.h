@@ -14,15 +14,13 @@ namespace rp::uicore
 
         ~ProgressBar() override;
 
-        void setProgress(double progress);
-
-        double getProgress() const;
-
-        void paint(juce::Graphics& g) override;
+        void setProgress(float progress);
 
     private:
 
-        double progress_;
+        void paint(juce::Graphics& g) override;
+
+        float progress_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProgressBar)
     };

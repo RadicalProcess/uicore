@@ -4,7 +4,7 @@
 namespace rp::uicore
 {
     ProgressBar::ProgressBar(const std::string& name)
-    : progress_(0.0)
+    : progress_(0.0f)
     {
         setName(name);
     }
@@ -13,9 +13,9 @@ namespace rp::uicore
     {
     }
 
-    void ProgressBar::setProgress(double progress)
+    void ProgressBar::setProgress(float progress)
     {
-        const auto clamped = juce::jlimit(0.0, 1.0, progress);
+        const auto clamped = juce::jlimit(0.0f, 1.0f, progress);
         if (clamped == progress_)
         {
             return;
@@ -23,11 +23,6 @@ namespace rp::uicore
 
         progress_ = clamped;
         repaint();
-    }
-
-    double ProgressBar::getProgress() const
-    {
-        return progress_;
     }
 
     void ProgressBar::paint(juce::Graphics& g)
@@ -43,7 +38,7 @@ namespace rp::uicore
             return;
         }
 
-        const auto filledWidth = static_cast<float>(bounds.getWidth() * progress_);
+        const auto filledWidth = bounds.getWidth() * progress_;
         g.setColour(styles::highlight);
         g.fillRoundedRectangle(bounds.withWidth(filledWidth), corner);
     }
