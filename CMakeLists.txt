@@ -14,7 +14,8 @@ add_library(UICore
         source/GlissonSlider/DisabledRenderer.cpp
         source/GlissonSlider/EnabledRenderer.cpp
         source/GlissonSlider/Knob.cpp
-        source/Label.cpp)
+        source/Label.cpp
+        source/ProgressBar.cpp)
 
 
 add_library(rp::UICore ALIAS UICore)
