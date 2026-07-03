@@ -6,6 +6,8 @@ add_library(UICore
         source/Waveform.cpp
         source/WaveformRenderer.cpp
         source/MotionView.cpp
+        source/GestureView.cpp
+        source/ThumbnailComponent.cpp
         source/OpenGLView.cpp
         source/ImageToggleButton.cpp
         source/GlissonSlider/HorizontalKnob.cpp
@@ -31,6 +33,7 @@ juce_add_binary_data(UIResource
 target_link_libraries(UICore
         PUBLIC
         UIResource
+        juce::juce_audio_formats
         juce::juce_gui_basics
         juce::juce_opengl)
 
