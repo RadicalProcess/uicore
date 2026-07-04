@@ -7,6 +7,7 @@ add_library(UICore
         source/WaveformRenderer.cpp
         source/MotionView.cpp
         source/GestureView.cpp
+        source/TrajectoryView.cpp
         source/TrajectoryThumbnail.cpp
         source/OpenGLView.cpp
         source/ObjModel.cpp
