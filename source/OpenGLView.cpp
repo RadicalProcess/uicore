@@ -1,5 +1,8 @@
 #include "UICore/OpenGLView.h"
+#include "UICore/ObjModel.h"
 #include "UICore/Style.h"
+
+#include <BinaryData.h>
 
 #include <array>
 #include <cmath>
@@ -91,28 +94,12 @@ namespace rp::uicore
             target.push_back(colour.getFloatGreen());
             target.push_back(colour.getFloatBlue());
         }
-
-        void appendQuad(std::vector<float>& target,
-                        const std::array<float, 3>& a,
-                        const std::array<float, 3>& b,
-                        const std::array<float, 3>& c,
-                        const std::array<float, 3>& d,
-                        const juce::Colour& colour)
-        {
-            appendVertex(target, a[0], a[1], a[2], colour);
-            appendVertex(target, b[0], b[1], b[2], colour);
-            appendVertex(target, c[0], c[1], c[2], colour);
-
-            appendVertex(target, a[0], a[1], a[2], colour);
-            appendVertex(target, c[0], c[1], c[2], colour);
-            appendVertex(target, d[0], d[1], d[2], colour);
-        }
     }
 
     OpenGLView::OpenGLView()
-    : cubeBuffer_(0)
+    : modelBuffer_(0)
     , gridBuffer_(0)
-    , cubeVertexCount_(0)
+    , modelVertexCount_(0)
     , gridVertexCount_(0)
     , cameraAzimuth_(degreesToRadians(35.0f))
     , cameraElevation_(degreesToRadians(20.0f))
@@ -130,46 +117,110 @@ namespace rp::uicore
 
     void OpenGLView::buildGeometry()
     {
-        cubeVertices_.clear();
+        modelVertices_.clear();
         gridVertices_.clear();
 
-        // Unit cube centred on the origin, each face a distinct colour.
-        const auto h = 1.0f;
-        const std::array<float, 3> nnn = { -h, -h, -h };
-        const std::array<float, 3> pnn = { h, -h, -h };
-        const std::array<float, 3> ppn = { h, h, -h };
-        const std::array<float, 3> npn = { -h, h, -h };
-        const std::array<float, 3> nnp = { -h, -h, h };
-        const std::array<float, 3> pnp = { h, -h, h };
-        const std::array<float, 3> ppp = { h, h, h };
-        const std::array<float, 3> npp = { -h, h, h };
+        // Load the bundled head model and normalise it so its centre sits at the
+        // origin regardless of the source file's units or origin.
+        ObjModel model;
+        model.loadFromString(juce::String::createStringFromData(BinaryData::head_lowpoly_obj,
+                                                                BinaryData::head_lowpoly_objSize));
 
-        appendQuad(cubeVertices_, nnp, pnp, ppp, npp, juce::Colour(214, 90, 90));   // front (+z)
-        appendQuad(cubeVertices_, pnn, nnn, npn, ppn, juce::Colour(90, 170, 110));  // back  (-z)
-        appendQuad(cubeVertices_, nnn, nnp, npp, npn, juce::Colour(80, 130, 210));  // left  (-x)
-        appendQuad(cubeVertices_, pnp, pnn, ppn, ppp, juce::Colour(225, 190, 90));  // right (+x)
-        appendQuad(cubeVertices_, npp, ppp, ppn, npn, juce::Colour(110, 200, 210)); // top   (+y)
-        appendQuad(cubeVertices_, nnn, pnn, pnp, nnp, juce::Colour(190, 110, 200)); // bottom(-y)
+        const auto centre = model.getCentre();
+        const auto maxExtent = model.getMaxExtent();
 
-        cubeVertexCount_ = static_cast<int>(cubeVertices_.size()) / 6;
+        // Target size of the model's largest dimension in world units, chosen so
+        // the head is roughly as tall as the reference cube used to be.
+        const auto targetSize = 2.2f;
+        const auto scale = (maxExtent > 0.0f) ? targetSize / maxExtent : 1.0f;
 
-        // Floor grid laid out on the y = -1 plane so the cube rests on it.
-        const auto gridExtent = 10;
-        const auto gridY = -h;
+        const auto transform = [centre, scale](const ObjModel::Position& p)
+        {
+            return std::array<float, 3>{ (p[0] - centre[0]) * scale,
+                                         (p[1] - centre[1]) * scale,
+                                         (p[2] - centre[2]) * scale };
+        };
+
+        // A single directional light baked into per-vertex colours so the flat
+        // shader still conveys the model's shape. Lighting is two-sided so faces
+        // are lit regardless of their winding order.
+        const auto lightDirection = normalise({ 0.35f, 0.8f, 0.5f });
+        const auto baseColour = juce::Colour(222, 186, 165); // warm skin tone
+        const auto baseRed = baseColour.getFloatRed();
+        const auto baseGreen = baseColour.getFloatGreen();
+        const auto baseBlue = baseColour.getFloatBlue();
+
+        for (const auto& triangle : model.getTriangles())
+        {
+            const auto a = transform(triangle.a);
+            const auto b = transform(triangle.b);
+            const auto c = transform(triangle.c);
+
+            const std::array<float, 3> edge1 = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
+            const std::array<float, 3> edge2 = { c[0] - a[0], c[1] - a[1], c[2] - a[2] };
+            const auto normal = normalise(cross(edge1, edge2));
+
+            const auto diffuse = std::abs(dot(normal, lightDirection));
+            const auto shade = 0.3f + 0.7f * diffuse;
+
+            const auto colour = juce::Colour::fromFloatRGBA(baseRed * shade, baseGreen * shade, baseBlue * shade, 1.0f);
+
+            appendVertex(modelVertices_, a[0], a[1], a[2], colour);
+            appendVertex(modelVertices_, b[0], b[1], b[2], colour);
+            appendVertex(modelVertices_, c[0], c[1], c[2], colour);
+        }
+
+        modelVertexCount_ = static_cast<int>(modelVertices_.size()) / 6;
+
+        // Wireframe grid room enclosing the model: the floor, ceiling and four
+        // walls are each drawn as a unit grid so the model appears to sit inside a
+        // room. The room is a cube centred on the origin, so both the room and the
+        // head share (0, 0, 0) as their centre.
+        const auto gridExtent = 6; // half-width of the room in grid cells
         const auto gridColour = juce::Colour(70, 90, 100);
-        const auto axisColour = styles::foreground;
 
+        const auto extent = static_cast<float>(gridExtent);
+        const auto floorY = -extent;
+        const auto ceilY = extent;
+
+        const auto addLine = [this, &gridColour](float x0, float y0, float z0, float x1, float y1, float z1)
+        {
+            appendVertex(gridVertices_, x0, y0, z0, gridColour);
+            appendVertex(gridVertices_, x1, y1, z1, gridColour);
+        };
+
+        // Floor and ceiling grids.
         for (auto i = -gridExtent; i <= gridExtent; ++i)
         {
             const auto coord = static_cast<float>(i);
-            const auto extent = static_cast<float>(gridExtent);
-            const auto& colour = (i == 0) ? axisColour : gridColour;
 
-            appendVertex(gridVertices_, coord, gridY, -extent, colour);
-            appendVertex(gridVertices_, coord, gridY, extent, colour);
+            addLine(coord, floorY, -extent, coord, floorY, extent);
+            addLine(-extent, floorY, coord, extent, floorY, coord);
 
-            appendVertex(gridVertices_, -extent, gridY, coord, colour);
-            appendVertex(gridVertices_, extent, gridY, coord, colour);
+            addLine(coord, ceilY, -extent, coord, ceilY, extent);
+            addLine(-extent, ceilY, coord, extent, ceilY, coord);
+        }
+
+        // Vertical grid lines running up the four walls.
+        for (auto i = -gridExtent; i <= gridExtent; ++i)
+        {
+            const auto coord = static_cast<float>(i);
+
+            addLine(coord, floorY, -extent, coord, ceilY, -extent); // back wall  (z = -extent)
+            addLine(coord, floorY, extent, coord, ceilY, extent);   // front wall (z = +extent)
+            addLine(-extent, floorY, coord, -extent, ceilY, coord); // left wall  (x = -extent)
+            addLine(extent, floorY, coord, extent, ceilY, coord);   // right wall (x = +extent)
+        }
+
+        // Horizontal rings around the walls at each height level.
+        for (auto i = -gridExtent; i <= gridExtent; ++i)
+        {
+            const auto y = static_cast<float>(i);
+
+            addLine(-extent, y, -extent, extent, y, -extent); // back wall
+            addLine(-extent, y, extent, extent, y, extent);   // front wall
+            addLine(-extent, y, -extent, -extent, y, extent); // left wall
+            addLine(extent, y, -extent, extent, y, extent);   // right wall
         }
 
         gridVertexCount_ = static_cast<int>(gridVertices_.size()) / 6;
@@ -215,11 +266,11 @@ namespace rp::uicore
             viewMatrix_ = std::make_unique<juce::OpenGLShaderProgram::Uniform>(*shader_, "viewMatrix");
         }
 
-        glGenBuffers(1, &cubeBuffer_);
-        glBindBuffer(GL_ARRAY_BUFFER, cubeBuffer_);
+        glGenBuffers(1, &modelBuffer_);
+        glBindBuffer(GL_ARRAY_BUFFER, modelBuffer_);
         glBufferData(GL_ARRAY_BUFFER,
-                     static_cast<GLsizeiptr>(cubeVertices_.size() * sizeof(float)),
-                     cubeVertices_.data(),
+                     static_cast<GLsizeiptr>(modelVertices_.size() * sizeof(float)),
+                     modelVertices_.data(),
                      GL_STATIC_DRAW);
 
         glGenBuffers(1, &gridBuffer_);
@@ -291,17 +342,17 @@ namespace rp::uicore
         };
 
         drawBuffer(gridBuffer_, GL_LINES, gridVertexCount_);
-        drawBuffer(cubeBuffer_, GL_TRIANGLES, cubeVertexCount_);
+        drawBuffer(modelBuffer_, GL_TRIANGLES, modelVertexCount_);
     }
 
     void OpenGLView::openGLContextClosing()
     {
-        if (cubeBuffer_ != 0)
-            glDeleteBuffers(1, &cubeBuffer_);
+        if (modelBuffer_ != 0)
+            glDeleteBuffers(1, &modelBuffer_);
         if (gridBuffer_ != 0)
             glDeleteBuffers(1, &gridBuffer_);
 
-        cubeBuffer_ = 0;
+        modelBuffer_ = 0;
         gridBuffer_ = 0;
 
         shader_.reset();

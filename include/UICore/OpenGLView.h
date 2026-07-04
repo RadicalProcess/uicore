@@ -8,11 +8,12 @@
 namespace rp::uicore
 {
 
-    // An OpenGL component that renders a cube standing on a reference floor grid.
-    // The camera orbits the cube: horizontal mouse drags rotate around it, while
-    // vertical drags raise or lower the camera within a fixed elevation range.
-    // The mouse wheel, or a Ctrl + vertical drag, zooms the camera in and out
-    // towards the central cube within a fixed distance range.
+    // An OpenGL component that renders a 3D model (a human head loaded from a
+    // bundled OBJ file) standing inside a wireframe grid room. The camera orbits
+    // the model: horizontal mouse drags rotate around it, while vertical drags
+    // raise or lower the camera within a fixed elevation range. The mouse wheel,
+    // or a Ctrl + vertical drag, zooms the camera in and out towards the central
+    // model within a fixed distance range.
     class OpenGLView : public juce::Component,
                        private juce::OpenGLRenderer
     {
@@ -40,11 +41,11 @@ namespace rp::uicore
         std::unique_ptr<juce::OpenGLShaderProgram::Uniform> projectionMatrix_;
         std::unique_ptr<juce::OpenGLShaderProgram::Uniform> viewMatrix_;
 
-        unsigned int cubeBuffer_;
+        unsigned int modelBuffer_;
         unsigned int gridBuffer_;
-        std::vector<float> cubeVertices_;
+        std::vector<float> modelVertices_;
         std::vector<float> gridVertices_;
-        int cubeVertexCount_;
+        int modelVertexCount_;
         int gridVertexCount_;
 
         float cameraAzimuth_;
