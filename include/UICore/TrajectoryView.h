@@ -23,11 +23,14 @@ namespace rp::uicore
     // borders, so the first anchor shows only its outgoing handle, the last only
     // its incoming one, and a lone anchor shows none. Dragging the selected
     // anchor moves it (its handles follow), and dragging one of its handles
-    // reshapes the adjoining segment. There is only ever a single curve. A small
-    // button in the top-right corner clears it.
+    // reshapes the adjoining segment; shift-clicking a handle resets it to the
+    // straight-line default. There is only ever a single curve. A small button
+    // in the top-right corner clears it.
     //
-    // Anchor positions and handles are stored normalised to the component bounds
-    // (0..1 on each axis, y increasing downwards) so the curve tracks resizes.
+    // Anchor positions and handles are stored normalised to the reference square
+    // (0..1 on each axis, y increasing downwards) rather than the whole
+    // component, so the curve keeps its proportions inside the circle when the
+    // component is resized non-uniformly.
     class TrajectoryView : public juce::Component
     {
     public:
@@ -85,6 +88,12 @@ namespace rp::uicore
         // one only when a next anchor exists.
         bool showHandleIn(int index) const;
         bool showHandleOut(int index) const;
+
+        // The straight-line default position of an anchor's handle: a third of
+        // the way toward the neighbouring anchor, so the bordering segment is a
+        // straight line. Only valid when the corresponding neighbour exists.
+        juce::Point<float> defaultHandleIn(int index) const;
+        juce::Point<float> defaultHandleOut(int index) const;
 
         // Builds the cubic bezier path through the anchors (in pixels).
         void buildPath(juce::Path& path) const;

@@ -152,10 +152,24 @@ namespace rp::uicore
         const auto position = event.position;
 
         // Grabbing a handle of the selected anchor takes priority so handles that
-        // sit near their anchor are still reachable.
+        // sit near their anchor are still reachable. Shift-clicking a handle
+        // resets it to its straight-line default instead of dragging.
         const auto handle = handleAt(position);
         if (handle != Drag::None)
         {
+            if (event.mods.isShiftDown())
+            {
+                auto& anchor = anchors_[static_cast<size_t>(selectedIndex_)];
+                if (handle == Drag::HandleOut)
+                    anchor.handleOut = defaultHandleOut(selectedIndex_);
+                else
+                    anchor.handleIn = defaultHandleIn(selectedIndex_);
+
+                notifyChange();
+                repaint();
+                return;
+            }
+
             dragMode_ = handle;
             return;
         }
@@ -261,18 +275,20 @@ namespace rp::uicore
 
     juce::Point<float> TrajectoryView::toPixel(juce::Point<float> normalised) const
     {
-        const auto bounds = getLocalBounds().toFloat();
-        return { bounds.getX() + normalised.x * bounds.getWidth(), bounds.getY() + normalised.y * bounds.getHeight() };
+        // Normalised coordinates map into the reference square, which is always
+        // 1:1, so the curve keeps its proportions when the component is resized.
+        const auto area = squareArea();
+        return { area.getX() + normalised.x * area.getWidth(), area.getY() + normalised.y * area.getHeight() };
     }
 
     juce::Point<float> TrajectoryView::toNormalised(juce::Point<float> pixel) const
     {
-        const auto bounds = getLocalBounds().toFloat();
-        const auto width = bounds.getWidth();
-        const auto height = bounds.getHeight();
+        const auto area = squareArea();
+        const auto width = area.getWidth();
+        const auto height = area.getHeight();
 
-        const auto x = (width > 0.0f) ? (pixel.x - bounds.getX()) / width : 0.0f;
-        const auto y = (height > 0.0f) ? (pixel.y - bounds.getY()) / height : 0.0f;
+        const auto x = (width > 0.0f) ? (pixel.x - area.getX()) / width : 0.0f;
+        const auto y = (height > 0.0f) ? (pixel.y - area.getY()) / height : 0.0f;
 
         return { std::clamp(x, 0.0f, 1.0f), std::clamp(y, 0.0f, 1.0f) };
     }
@@ -287,6 +303,20 @@ namespace rp::uicore
     {
         // The outgoing handle only shapes a segment when a next anchor exists.
         return index < static_cast<int>(anchors_.size()) - 1;
+    }
+
+    juce::Point<float> TrajectoryView::defaultHandleIn(int index) const
+    {
+        const auto& anchor = anchors_[static_cast<size_t>(index)];
+        const auto& previous = anchors_[static_cast<size_t>(index) - 1];
+        return anchor.position + (previous.position - anchor.position) * outHandleFraction_;
+    }
+
+    juce::Point<float> TrajectoryView::defaultHandleOut(int index) const
+    {
+        const auto& anchor = anchors_[static_cast<size_t>(index)];
+        const auto& next = anchors_[static_cast<size_t>(index) + 1];
+        return anchor.position + (next.position - anchor.position) * outHandleFraction_;
     }
 
     void TrajectoryView::buildPath(juce::Path& path) const
