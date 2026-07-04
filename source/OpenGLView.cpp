@@ -22,6 +22,9 @@ namespace rp::uicore
         constexpr float maxDistance = 20.0f;
         constexpr float wheelZoomSensitivity = 4.0f;
         constexpr float dragZoomSensitivity = 0.02f;
+        constexpr float minRoomSize = 1.0f;
+        constexpr float maxRoomSize = 30.0f;
+        constexpr float defaultRoomSize = 12.0f;
 
         using Mat4 = std::array<float, 16>;
 
@@ -101,6 +104,10 @@ namespace rp::uicore
     , gridBuffer_(0)
     , modelVertexCount_(0)
     , gridVertexCount_(0)
+    , roomWidth_(defaultRoomSize)
+    , roomHeight_(defaultRoomSize)
+    , roomDepth_(defaultRoomSize)
+    , gridGeometryDirty_(false)
     , cameraAzimuth_(degreesToRadians(35.0f))
     , cameraElevation_(degreesToRadians(20.0f))
     , cameraDistance_(8.0f)
@@ -117,8 +124,13 @@ namespace rp::uicore
 
     void OpenGLView::buildGeometry()
     {
+        buildModelGeometry();
+        buildGridGeometry();
+    }
+
+    void OpenGLView::buildModelGeometry()
+    {
         modelVertices_.clear();
-        gridVertices_.clear();
 
         // Load the bundled head model and normalise it so its centre sits at the
         // origin regardless of the source file's units or origin.
@@ -171,17 +183,50 @@ namespace rp::uicore
         }
 
         modelVertexCount_ = static_cast<int>(modelVertices_.size()) / 6;
+    }
+
+    void OpenGLView::buildGridGeometry()
+    {
+        gridVertices_.clear();
 
         // Wireframe grid room enclosing the model: the floor, ceiling and four
-        // walls are each drawn as a unit grid so the model appears to sit inside a
-        // room. The room is a cube centred on the origin, so both the room and the
-        // head share (0, 0, 0) as their centre.
-        const auto gridExtent = 6; // half-width of the room in grid cells
+        // walls are each drawn as a 1 m grid so the model appears to sit inside a
+        // room. The room is a box centred on the origin, so both the room and the
+        // head share (0, 0, 0) as their centre. Its extents are driven by the
+        // width (x), height (y) and depth (z) set through the public setters.
         const auto gridColour = juce::Colour(70, 90, 100);
 
-        const auto extent = static_cast<float>(gridExtent);
-        const auto floorY = -extent;
-        const auto ceilY = extent;
+        const auto halfWidth = roomWidth_ * 0.5f;
+        const auto halfHeight = roomHeight_ * 0.5f;
+        const auto halfDepth = roomDepth_ * 0.5f;
+
+        // Grid-line coordinates along one axis: the two outer edges plus a line at
+        // every whole metre in between, so the room stays subdivided into 1 m
+        // cells at any size.
+        const auto axisCoords = [](float half)
+        {
+            std::vector<float> coords;
+            coords.push_back(-half);
+
+            const auto first = static_cast<int>(std::ceil(-half));
+            const auto last = static_cast<int>(std::floor(half));
+            for (auto i = first; i <= last; ++i)
+            {
+                const auto coord = static_cast<float>(i);
+                if (coord > -half && coord < half)
+                    coords.push_back(coord);
+            }
+
+            coords.push_back(half);
+            return coords;
+        };
+
+        const auto xs = axisCoords(halfWidth);
+        const auto ys = axisCoords(halfHeight);
+        const auto zs = axisCoords(halfDepth);
+
+        const auto floorY = -halfHeight;
+        const auto ceilY = halfHeight;
 
         const auto addLine = [this, &gridColour](float x0, float y0, float z0, float x1, float y1, float z1)
         {
@@ -189,38 +234,37 @@ namespace rp::uicore
             appendVertex(gridVertices_, x1, y1, z1, gridColour);
         };
 
-        // Floor and ceiling grids.
-        for (auto i = -gridExtent; i <= gridExtent; ++i)
+        // Floor and ceiling grids (x-z planes at y = +/- halfHeight).
+        for (const auto x : xs)
         {
-            const auto coord = static_cast<float>(i);
-
-            addLine(coord, floorY, -extent, coord, floorY, extent);
-            addLine(-extent, floorY, coord, extent, floorY, coord);
-
-            addLine(coord, ceilY, -extent, coord, ceilY, extent);
-            addLine(-extent, ceilY, coord, extent, ceilY, coord);
+            addLine(x, floorY, -halfDepth, x, floorY, halfDepth);
+            addLine(x, ceilY, -halfDepth, x, ceilY, halfDepth);
+        }
+        for (const auto z : zs)
+        {
+            addLine(-halfWidth, floorY, z, halfWidth, floorY, z);
+            addLine(-halfWidth, ceilY, z, halfWidth, ceilY, z);
         }
 
         // Vertical grid lines running up the four walls.
-        for (auto i = -gridExtent; i <= gridExtent; ++i)
+        for (const auto x : xs)
         {
-            const auto coord = static_cast<float>(i);
-
-            addLine(coord, floorY, -extent, coord, ceilY, -extent); // back wall  (z = -extent)
-            addLine(coord, floorY, extent, coord, ceilY, extent);   // front wall (z = +extent)
-            addLine(-extent, floorY, coord, -extent, ceilY, coord); // left wall  (x = -extent)
-            addLine(extent, floorY, coord, extent, ceilY, coord);   // right wall (x = +extent)
+            addLine(x, floorY, -halfDepth, x, ceilY, -halfDepth); // back wall  (z = -halfDepth)
+            addLine(x, floorY, halfDepth, x, ceilY, halfDepth);   // front wall (z = +halfDepth)
+        }
+        for (const auto z : zs)
+        {
+            addLine(-halfWidth, floorY, z, -halfWidth, ceilY, z); // left wall  (x = -halfWidth)
+            addLine(halfWidth, floorY, z, halfWidth, ceilY, z);   // right wall (x = +halfWidth)
         }
 
         // Horizontal rings around the walls at each height level.
-        for (auto i = -gridExtent; i <= gridExtent; ++i)
+        for (const auto y : ys)
         {
-            const auto y = static_cast<float>(i);
-
-            addLine(-extent, y, -extent, extent, y, -extent); // back wall
-            addLine(-extent, y, extent, extent, y, extent);   // front wall
-            addLine(-extent, y, -extent, -extent, y, extent); // left wall
-            addLine(extent, y, -extent, extent, y, extent);   // right wall
+            addLine(-halfWidth, y, -halfDepth, halfWidth, y, -halfDepth); // back wall
+            addLine(-halfWidth, y, halfDepth, halfWidth, y, halfDepth);   // front wall
+            addLine(-halfWidth, y, -halfDepth, -halfWidth, y, halfDepth); // left wall
+            addLine(halfWidth, y, -halfDepth, halfWidth, y, halfDepth);   // right wall
         }
 
         gridVertexCount_ = static_cast<int>(gridVertices_.size()) / 6;
@@ -288,6 +332,19 @@ namespace rp::uicore
 
         if (shader_ == nullptr)
             return;
+
+        // A room dimension changed since the last frame: rebuild the grid and
+        // re-upload it here, on the GL thread, before drawing.
+        if (gridGeometryDirty_)
+        {
+            buildGridGeometry();
+            glBindBuffer(GL_ARRAY_BUFFER, gridBuffer_);
+            glBufferData(GL_ARRAY_BUFFER,
+                         static_cast<GLsizeiptr>(gridVertices_.size() * sizeof(float)),
+                         gridVertices_.data(),
+                         GL_STATIC_DRAW);
+            gridGeometryDirty_ = false;
+        }
 
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);
@@ -397,6 +454,42 @@ namespace rp::uicore
     void OpenGLView::zoomBy(float amount)
     {
         cameraDistance_ = juce::jlimit(minDistance, maxDistance, cameraDistance_ + amount);
+        openGLContext_.triggerRepaint();
+    }
+
+    void OpenGLView::setWidth(float widthMetres)
+    {
+        const auto clamped = juce::jlimit(minRoomSize, maxRoomSize, widthMetres);
+        if (roomWidth_ == clamped)
+            return;
+
+        roomWidth_ = clamped;
+        markGridDirty();
+    }
+
+    void OpenGLView::setHeight(float heightMetres)
+    {
+        const auto clamped = juce::jlimit(minRoomSize, maxRoomSize, heightMetres);
+        if (roomHeight_ == clamped)
+            return;
+
+        roomHeight_ = clamped;
+        markGridDirty();
+    }
+
+    void OpenGLView::setDepth(float depthMetres)
+    {
+        const auto clamped = juce::jlimit(minRoomSize, maxRoomSize, depthMetres);
+        if (roomDepth_ == clamped)
+            return;
+
+        roomDepth_ = clamped;
+        markGridDirty();
+    }
+
+    void OpenGLView::markGridDirty()
+    {
+        gridGeometryDirty_ = true;
         openGLContext_.triggerRepaint();
     }
 
