@@ -34,29 +34,30 @@ namespace rp::uicore
             keyBox_.addItem(keyName(note), note - firstKey + 1);
 
         keyBox_.setSelectedId(1, juce::dontSendNotification);
-        keyBox_.setBounds(10, 60, 70, 30);
+        keyBox_.setBounds(5, 5, 70, 30);
         addAndMakeVisible(keyBox_);
 
         // The gesture name is the only editable field.
-        nameLabel_.setBounds(90, 60, 100, 30);
+        nameLabel_.setBounds(90, 7, 200, 26);
         nameLabel_.setEditable(true);
         nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
         addAndMakeVisible(nameLabel_);
 
-        soundfileLabel_.setBounds(200, 60, 100, 30);
+        soundfileLabel_.setBounds(5, 50, 140, 20);
         addAndMakeVisible(soundfileLabel_);
 
-        usageLabel_.setBounds(310, 60, 100, 30);
+        usageLabel_.setBounds(160, 50, 14, 20);
         addAndMakeVisible(usageLabel_);
 
-        thumbnail_.setBounds(420, 55, 60, 40);
+        thumbnail_.setBounds(290, 7, 60, 60);
         addAndMakeVisible(thumbnail_);
     }
 
     void GestureView::paint(juce::Graphics &g)
     {
         g.fillAll(juce::Colours::black);
-
+        g.setColour(juce::Colour(juce::Colours::white));
+        g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.0f, 1.0f);
         if (!fileDragActive_)
             return;
 
@@ -83,8 +84,7 @@ namespace rp::uicore
         if (extension != ".wav" && extension != ".aiff" && extension != ".aif")
             return false;
 
-        // Reject anything we cannot decode as well as multichannel files; a
-        // gesture plays a single mono sample.
+
         const std::unique_ptr<juce::AudioFormatReader> reader(
             formatManager_.createReaderFor(file));
 
