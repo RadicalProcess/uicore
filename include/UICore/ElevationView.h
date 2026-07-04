@@ -9,12 +9,14 @@ namespace rp::uicore
 {
 
     // A companion editor for TrajectoryView that sets the elevation of each
-    // trajectory node. It draws a straight-segment graph (no curves) through a
-    // row of nodes: the nodes are spread evenly across a drawing area whose width
-    // is fixed by setDrawingAreaWidth, and the graph is centred in the component.
+    // trajectory node. It draws a straight-segment graph (no curves) through the
+    // nodes inside a drawing area whose width is fixed by setDrawingAreaWidth,
+    // and the graph is centred in the component.
     //
     // The set of nodes is driven entirely by the API: setNodes replaces them and
-    // the user cannot add or remove nodes by clicking. The user can only drag a
+    // the user cannot add or remove nodes by clicking. Each node carries a fixed
+    // horizontal position (typically the x of the matching trajectory anchor, so
+    // the two views line up) and a vertical elevation. The user can only drag a
     // node vertically to change its elevation; a node never moves horizontally.
     // Each drag fires onChange so the host can read the new elevations back.
     //
@@ -28,15 +30,18 @@ namespace rp::uicore
         ElevationView();
         ~ElevationView() override = default;
 
-        // Replaces the nodes with the given elevations, one per node, in order.
-        // Each value is a normalised vertical position in the drawing area
-        // (0 = top, 1 = bottom, 0.5 = elevation zero) and is clamped to 0..1.
-        // The nodes are spread evenly across the drawing area width. This does
-        // not fire onChange, since it is an API update rather than a user edit.
-        void setNodes(const std::vector<float>& positions);
+        // Replaces the nodes with the given positions, one per node, in order.
+        // Each point is normalised to the drawing area and clamped to 0..1 on
+        // both axes: x is the node's fixed horizontal position (0 = left edge,
+        // 1 = right edge), matching TrajectoryView's normalised anchor x so the
+        // two views stay aligned, and y its elevation (0 = top, 1 = bottom,
+        // 0.5 = elevation zero). This does not fire onChange, since it is an
+        // API update rather than a user edit.
+        void setNodes(const std::vector<juce::Point<float>>& positions);
 
-        // The current node elevations, normalised 0..1, in node order.
-        std::vector<float> getNodes() const;
+        // The current nodes, normalised 0..1, in node order: x the fixed
+        // horizontal position, y the elevation.
+        std::vector<juce::Point<float>> getNodes() const;
 
         // Sets the width (in pixels) of the drawing area the graph is laid out
         // in. The area stays centred in the component; a width wider than the
@@ -59,7 +64,7 @@ namespace rp::uicore
         juce::Rectangle<float> drawingArea() const;
 
         // The pixel position of the node at the given index, derived from its
-        // even horizontal slot and its normalised elevation.
+        // fixed horizontal position and its elevation.
         juce::Point<float> nodePixel(int index) const;
 
         // Index of the node whose marker contains the given local point, or -1.
@@ -67,8 +72,9 @@ namespace rp::uicore
 
         void notifyChange() const;
 
-        // Normalised elevations, one per node (0 = top, 1 = bottom).
-        std::vector<float> values_;
+        // Normalised nodes: x the fixed horizontal position, y the elevation
+        // (0 = top, 1 = bottom).
+        std::vector<juce::Point<float>> nodes_;
 
         // Width (in pixels) of the drawing area, or 0 before it is set (in which
         // case the whole component width is used).
