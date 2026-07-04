@@ -9,6 +9,7 @@ add_library(UICore
         source/GestureView.cpp
         source/ThumbnailComponent.cpp
         source/OpenGLView.cpp
+        source/ObjModel.cpp
         source/ImageToggleButton.cpp
         source/GlissonSlider/HorizontalKnob.cpp
         source/GlissonSlider/VerticalKnob.cpp
@@ -29,7 +30,8 @@ target_include_directories(UICore
 juce_add_binary_data(UIResource
         SOURCES
         resource/RobotoCondensed.ttf
-        resource/Logo.png)
+        resource/Logo.png
+        resource/head_lowpoly.obj)
 
 target_link_libraries(UICore
         PUBLIC
