@@ -5,7 +5,7 @@
 
 #include "ComboBox.h"
 #include "Label.h"
-#include "ThumbnailComponent.h"
+#include "TrajectoryThumbnail.h"
 
 #include <functional>
 
@@ -65,7 +65,7 @@ namespace rp::uicore
         Label usageLabel_;
 
         // Gray preview placeholder.
-        ThumbnailComponent thumbnail_;
+        TrajectoryThumbnail thumbnail_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GestureView)
     };

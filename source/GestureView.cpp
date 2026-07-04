@@ -42,7 +42,6 @@ namespace rp::uicore
         nameLabel_.setEditable(true);
         nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
         addAndMakeVisible(nameLabel_);
-
         soundfileLabel_.setBounds(5, 50, 140, 20);
         addAndMakeVisible(soundfileLabel_);
 
