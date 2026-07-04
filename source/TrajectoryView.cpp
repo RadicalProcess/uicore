@@ -47,6 +47,14 @@ namespace rp::uicore
         // reaches perpendicular to the curve for a full-scale sample.
         const auto waveformAmplitudeFraction_ = 0.12f;
 
+        // The playhead is a short line crossing the curve at right angles:
+        // playheadHalfLength_ is how far it reaches either side of the curve,
+        // playheadThickness_ its stroke width, and playheadTangentStep_ the small
+        // step (in pixels) used to estimate the curve tangent at the playhead.
+        const auto playheadHalfLength_ = 9.0f;
+        const auto playheadThickness_ = 2.5f;
+        const auto playheadTangentStep_ = 2.0f;
+
         // Fractions along a fresh straight segment where the two joining handles
         // are placed, so a new anchor connects to the previous one with a visibly
         // straight line whose control knobs sit on that line.
@@ -59,6 +67,8 @@ namespace rp::uicore
     , dragMode_(Drag::None)
     , clearButton_("clear")
     , waveformButton_("waveform")
+    , playheadEnabled_(false)
+    , playheadPosition_(0.0f)
     {
         setOpaque(true);
 
@@ -102,6 +112,18 @@ namespace rp::uicore
         repaint();
     }
 
+    void TrajectoryView::setPlayheadEnabled(bool enabled)
+    {
+        playheadEnabled_ = enabled;
+        repaint();
+    }
+
+    void TrajectoryView::setPlayheadPosition(float position)
+    {
+        playheadPosition_ = std::clamp(position, 0.0f, 1.0f);
+        repaint();
+    }
+
     void TrajectoryView::paint(juce::Graphics& g)
     {
         g.fillAll(backgroundColour_);
@@ -112,11 +134,13 @@ namespace rp::uicore
         g.drawRect(square, lineWidth_);
         g.drawEllipse(square, lineWidth_);
 
-        // The bezier curve through the anchors, with the optional waveform drawn
-        // along it first so the curve reads over the top.
-        if (anchors_.size() >= 2)
+        // The bezier curve through the anchors, built once and reused for the
+        // waveform and the playhead, with the optional waveform drawn along it
+        // first so the curve reads over the top.
+        juce::Path path;
+        const auto hasCurve = anchors_.size() >= 2;
+        if (hasCurve)
         {
-            juce::Path path;
             buildPath(path);
 
             if (waveformButton_.getToggleState())
@@ -172,6 +196,39 @@ namespace rp::uicore
                 g.setColour(styles::foreground);
                 g.drawEllipse(bounds, lineWidth_);
             }
+        }
+
+        // The playhead riding along the curve, drawn on top of everything so the
+        // playback position stays visible. It is a short line crossing the curve
+        // perpendicular to its tangent, in the highlight colour, to match the
+        // Waveform and MotionView playheads.
+        if (hasCurve && playheadEnabled_)
+        {
+            const auto totalLength = path.getLength();
+            const auto distance = playheadPosition_ * totalLength;
+            const auto centre = path.getPointAlongPath(distance);
+
+            // Estimate the tangent from points either side of the playhead. A
+            // tight spot in the curve can make a small step degenerate (both
+            // points coincide), so widen the step until it yields a direction;
+            // this keeps the crossing line perpendicular everywhere. Only a
+            // zero-length curve leaves the fallback vertical normal in place.
+            auto normal = juce::Point<float>(0.0f, 1.0f);
+            for (auto step = playheadTangentStep_; step <= totalLength; step *= 2.0f)
+            {
+                const auto behind = path.getPointAlongPath(std::max(0.0f, distance - step));
+                const auto ahead = path.getPointAlongPath(std::min(totalLength, distance + step));
+                const auto tangent = ahead - behind;
+                const auto tangentLength = tangent.getDistanceFromOrigin();
+                if (tangentLength > 0.0f)
+                {
+                    normal = juce::Point<float>(-tangent.y, tangent.x) / tangentLength;
+                    break;
+                }
+            }
+
+            g.setColour(styles::highlight);
+            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), playheadThickness_);
         }
     }
 
