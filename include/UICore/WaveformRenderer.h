@@ -38,6 +38,14 @@ namespace rp::uicore
         // with reduced alpha for a translucent rendering.
         void paintWaveform(juce::Graphics& g, const juce::Rectangle<float>& bounds, const juce::Colour& colour) const;
 
+        // Draws the waveform along an arbitrary path instead of across a
+        // rectangle: the first channel is walked as evenly spaced peak lines
+        // (the same peak-bucket rendering the rectangular version uses for dense
+        // audio), each drawn perpendicular to the path with its half-length set
+        // by amplitude times the bucket peak, so the waveform follows the curve.
+        // Pass a colour with reduced alpha for a translucent rendering.
+        void paintWaveformAlongPath(juce::Graphics& g, const juce::Path& path, float amplitude, const juce::Colour& colour) const;
+
         // Draws the playhead as a vertical line at the current position across
         // bounds. Does nothing while the playhead is hidden.
         void paintPlayhead(juce::Graphics& g, const juce::Rectangle<float>& bounds, const juce::Colour& colour) const;

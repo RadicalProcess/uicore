@@ -44,6 +44,21 @@ namespace rp::uicore
             return centerY - value * maxAmplitude;
         }
 
+        // Loudest magnitude in the contiguous bucket of samples that peak line
+        // number maps to, so a line's length reflects the peak of the audio it
+        // represents rather than a single sample.
+        float bucketPeak(const std::vector<float>& channelData, size_t line, size_t numLines)
+        {
+            const auto bucketStart = line * channelData.size() / numLines;
+            const auto bucketEnd = std::max(bucketStart + 1, (line + 1) * channelData.size() / numLines);
+
+            auto peak = 0.0f;
+            for (auto s = bucketStart; s < bucketEnd && s < channelData.size(); ++s)
+                peak = std::max(peak, std::abs(channelData[s]));
+
+            return peak;
+        }
+
         // Peak rendering: one vertical line per pixel column, its length set by
         // the loudest sample in the bucket it represents. Suited to dense audio
         // where many samples map to each pixel.
@@ -55,19 +70,9 @@ namespace rp::uicore
 
             for (auto i = static_cast<size_t>(0); i < numLines; ++i)
             {
-                // Map this line to a contiguous bucket of samples and take the
-                // loudest magnitude in it, so the line length reflects the peak
-                // of the audio it represents rather than a single sample.
-                const auto bucketStart = i * channelData.size() / numLines;
-                const auto bucketEnd = std::max(bucketStart + 1, (i + 1) * channelData.size() / numLines);
-
-                auto peak = 0.0f;
-                for (auto s = bucketStart; s < bucketEnd && s < channelData.size(); ++s)
-                    peak = std::max(peak, std::abs(channelData[s]));
-
                 // Half-length above and below the centre line: peak (0..1) scaled
                 // to half the available height. Total line length = 2 * halfLength.
-                const auto halfLength = peak * maxAmplitude;
+                const auto halfLength = bucketPeak(channelData, i, numLines) * maxAmplitude;
                 const auto x = bounds.getX() + static_cast<float>(i) * lineStride_;
                 g.drawLine(x, centerY - halfLength, x, centerY + halfLength, lineWidth_);
             }
@@ -193,6 +198,51 @@ namespace rp::uicore
 
             paintChannelWaveform(g, waveformData_[0], leftChannelBounds, colour);
             paintChannelWaveform(g, waveformData_[1], rightChannelBounds, colour);
+        }
+    }
+
+    void WaveformRenderer::paintWaveformAlongPath(juce::Graphics& g, const juce::Path& path, float amplitude, const juce::Colour& colour) const
+    {
+        if (waveformData_.empty() || waveformData_[0].empty())
+            return;
+
+        const auto totalLength = path.getLength();
+        if (totalLength <= 0.0f)
+            return;
+
+        // Spread the peak lines evenly along the path at the same stride the
+        // rectangular peak rendering uses, so the along-curve waveform keeps the
+        // familiar density.
+        const auto numLines = static_cast<size_t>(totalLength / lineStride_);
+        if (numLines == 0)
+            return;
+
+        // A short step used to estimate the path tangent at each line by
+        // sampling a point just ahead and just behind it.
+        const auto tangentStep = lineStride_ * 0.5f;
+
+        const auto& channelData = waveformData_[0];
+
+        g.setColour(colour);
+        for (auto i = static_cast<size_t>(0); i < numLines; ++i)
+        {
+            const auto distance = static_cast<float>(i) * lineStride_;
+            const auto centre = path.getPointAlongPath(distance);
+
+            // The tangent from a point behind to a point ahead, clamped to the
+            // ends of the path so the first and last lines still get a direction.
+            const auto behind = path.getPointAlongPath(std::max(0.0f, distance - tangentStep));
+            const auto ahead = path.getPointAlongPath(std::min(totalLength, distance + tangentStep));
+            const auto tangent = ahead - behind;
+            const auto tangentLength = tangent.getDistanceFromOrigin();
+            if (tangentLength <= 0.0f)
+                continue;
+
+            // The unit normal to the path, along which the line extends either
+            // side of the curve by the bucket peak scaled to amplitude.
+            const auto normal = juce::Point<float>(-tangent.y, tangent.x) / tangentLength;
+            const auto halfLength = bucketPeak(channelData, i, numLines) * amplitude;
+            g.drawLine(juce::Line<float>(centre - normal * halfLength, centre + normal * halfLength), lineWidth_);
         }
     }
 

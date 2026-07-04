@@ -34,6 +34,19 @@ namespace rp::uicore
         const auto clearButtonSize_ = 22;
         const auto clearButtonMargin_ = 6;
 
+        // Width (in pixels) of the "waveform" toggle sitting just left of the
+        // clear button, sharing its height, with a gap between the two.
+        const auto waveformButtonWidth_ = 76;
+        const auto waveformButtonGap_ = 6;
+
+        // Alpha applied to the foreground colour for the waveform drawn along the
+        // curve, keeping it a translucent backdrop the curve reads over.
+        const auto waveformAlpha_ = 0.5f;
+
+        // Half-extent (as a fraction of the reference square's side) the waveform
+        // reaches perpendicular to the curve for a full-scale sample.
+        const auto waveformAmplitudeFraction_ = 0.12f;
+
         // Fractions along a fresh straight segment where the two joining handles
         // are placed, so a new anchor connects to the previous one with a visibly
         // straight line whose control knobs sit on that line.
@@ -45,12 +58,18 @@ namespace rp::uicore
     : selectedIndex_(-1)
     , dragMode_(Drag::None)
     , clearButton_("clear")
+    , waveformButton_("waveform")
     {
         setOpaque(true);
 
         clearButton_.setButtonText("x");
         clearButton_.onClick = [this] { clear(); };
         addAndMakeVisible(clearButton_);
+
+        waveformButton_.setButtonText("waveform");
+        waveformButton_.setClickingTogglesState(true);
+        waveformButton_.onClick = [this] { repaint(); };
+        addAndMakeVisible(waveformButton_);
     }
 
     std::vector<juce::Point<float>> TrajectoryView::getAnchors() const
@@ -76,6 +95,13 @@ namespace rp::uicore
         repaint();
     }
 
+    void TrajectoryView::setWaveformData(const std::vector<float>& waveformData)
+    {
+        // The renderer holds channels; the curve carries a single mono channel.
+        waveformRenderer_.setWaveformData({ waveformData });
+        repaint();
+    }
+
     void TrajectoryView::paint(juce::Graphics& g)
     {
         g.fillAll(backgroundColour_);
@@ -86,11 +112,19 @@ namespace rp::uicore
         g.drawRect(square, lineWidth_);
         g.drawEllipse(square, lineWidth_);
 
-        // The bezier curve through the anchors.
+        // The bezier curve through the anchors, with the optional waveform drawn
+        // along it first so the curve reads over the top.
         if (anchors_.size() >= 2)
         {
             juce::Path path;
             buildPath(path);
+
+            if (waveformButton_.getToggleState())
+            {
+                const auto amplitude = square.getWidth() * waveformAmplitudeFraction_;
+                waveformRenderer_.paintWaveformAlongPath(g, path, amplitude, styles::foreground.withAlpha(waveformAlpha_));
+            }
+
             g.setColour(styles::foreground);
             g.strokePath(path, juce::PathStrokeType(curveWidth_));
         }
@@ -144,6 +178,12 @@ namespace rp::uicore
     void TrajectoryView::resized()
     {
         clearButton_.setBounds(getWidth() - clearButtonSize_ - clearButtonMargin_, clearButtonMargin_, clearButtonSize_, clearButtonSize_);
+
+        // The waveform toggle sits just left of the clear button, sharing its
+        // row and height.
+        const auto waveformButtonX = clearButton_.getX() - waveformButtonGap_ - waveformButtonWidth_;
+        waveformButton_.setBounds(waveformButtonX, clearButtonMargin_, waveformButtonWidth_, clearButtonSize_);
+
         repaint();
     }
 
