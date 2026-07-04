@@ -14,6 +14,10 @@ namespace rp::uicore
     // raise or lower the camera within a fixed elevation range. The mouse wheel,
     // or a Ctrl + vertical drag, zooms the camera in and out towards the central
     // model within a fixed distance range.
+    //
+    // The room's dimensions can be changed at runtime with setWidth, setHeight
+    // and setDepth. Each is given in metres and clamped to a fixed range; the
+    // rendered grid updates immediately.
     class OpenGLView : public juce::Component,
                        private juce::OpenGLRenderer
     {
@@ -25,6 +29,16 @@ namespace rp::uicore
         void renderOpenGL() override;
         void openGLContextClosing() override;
 
+        // Sets the room (grid cube) size in metres along the x axis. The value is
+        // clamped to [1, 30] and the grid is rebuilt on the next render.
+        void setWidth(float widthMetres);
+
+        // Sets the room size in metres along the y axis (see setWidth).
+        void setHeight(float heightMetres);
+
+        // Sets the room size in metres along the z axis (see setWidth).
+        void setDepth(float depthMetres);
+
     private:
         void mouseDown(const juce::MouseEvent& event) override;
         void mouseDrag(const juce::MouseEvent& event) override;
@@ -33,6 +47,9 @@ namespace rp::uicore
         void zoomBy(float amount);
 
         void buildGeometry();
+        void buildModelGeometry();
+        void buildGridGeometry();
+        void markGridDirty();
 
         juce::OpenGLContext openGLContext_;
         std::unique_ptr<juce::OpenGLShaderProgram> shader_;
@@ -47,6 +64,11 @@ namespace rp::uicore
         std::vector<float> gridVertices_;
         int modelVertexCount_;
         int gridVertexCount_;
+
+        float roomWidth_;
+        float roomHeight_;
+        float roomDepth_;
+        bool gridGeometryDirty_;
 
         float cameraAzimuth_;
         float cameraElevation_;
