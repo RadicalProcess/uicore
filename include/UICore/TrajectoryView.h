@@ -1,5 +1,7 @@
 #pragma once
 
+#include "WaveformRenderer.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -43,6 +45,14 @@ namespace rp::uicore
 
         // Removes every anchor, leaving an empty curve.
         void clear();
+
+        // Sets the audio the "waveform" toggle draws along the curve. The data
+        // is a single channel of samples in -1..1; passing an empty vector
+        // leaves nothing to draw. The waveform is only visible while the toggle
+        // is on and the curve has at least two anchors, and is rendered with the
+        // same peak-line algorithm the Waveform component uses for dense audio
+        // (see WaveformRenderer::paintWaveformAlongPath).
+        void setWaveformData(const std::vector<float>& waveformData);
 
         // Invoked whenever the curve changes, either through user interaction or
         // clear().
@@ -117,6 +127,13 @@ namespace rp::uicore
 
         // Clears the whole curve.
         juce::TextButton clearButton_;
+
+        // Toggles the waveform drawn along the curve, sitting just left of the
+        // clear button.
+        juce::TextButton waveformButton_;
+
+        // The audio drawn along the curve while the waveform toggle is on.
+        WaveformRenderer waveformRenderer_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrajectoryView)
     };
