@@ -54,6 +54,16 @@ namespace rp::uicore
         // (see WaveformRenderer::paintWaveformAlongPath).
         void setWaveformData(const std::vector<float>& waveformData);
 
+        // Shows or hides the playhead: a short line that crosses the curve at the
+        // position set by setPlayheadPosition. Hidden by default, and only ever
+        // drawn while the curve has at least two anchors. The line uses the
+        // highlight colour to match the Waveform and MotionView playheads.
+        void setPlayheadEnabled(bool enabled);
+
+        // The normalised position of the playhead along the curve, 0 at the start
+        // point and 1 at the end point. Values are clamped to 0..1.
+        void setPlayheadPosition(float position);
+
         // Invoked whenever the curve changes, either through user interaction or
         // clear().
         std::function<void()> onChange;
@@ -134,6 +144,11 @@ namespace rp::uicore
 
         // The audio drawn along the curve while the waveform toggle is on.
         WaveformRenderer waveformRenderer_;
+
+        // Whether the playhead marker is drawn, and its normalised position
+        // (0..1) along the curve.
+        bool playheadEnabled_;
+        float playheadPosition_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrajectoryView)
     };
