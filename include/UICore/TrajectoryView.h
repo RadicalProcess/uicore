@@ -43,6 +43,11 @@ namespace rp::uicore
         // normalised to 0..1.
         std::vector<juce::Point<float>> getAnchors() const;
 
+        // The diameter (in pixels) of the inscribed reference circle, i.e. the
+        // side of the centred reference square. Tracks the component bounds, so
+        // a companion view can match its drawing area to the circle.
+        float getCircleDiameter() const;
+
         // Removes every anchor, leaving an empty curve.
         void clear();
 
