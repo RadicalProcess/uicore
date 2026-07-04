@@ -2,7 +2,7 @@ add_library(UICore
         source/Font.cpp
         source/ComboBox.cpp
         source/StepSlider.cpp
-        source/Keyboard.cpp
+        source/KeyboardView.cpp
         source/Waveform.cpp
         source/WaveformRenderer.cpp
         source/MotionView.cpp
@@ -35,6 +35,7 @@ target_link_libraries(UICore
         PUBLIC
         UIResource
         juce::juce_audio_formats
+        juce::juce_audio_utils
         juce::juce_gui_basics
         juce::juce_opengl)
 
