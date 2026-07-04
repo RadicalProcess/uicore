@@ -92,6 +92,11 @@ namespace rp::uicore
         return positions;
     }
 
+    float TrajectoryView::getCircleDiameter() const
+    {
+        return squareArea().getWidth();
+    }
+
     void TrajectoryView::clear()
     {
         if (anchors_.empty())
