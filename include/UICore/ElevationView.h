@@ -32,8 +32,28 @@ namespace rp::uicore
     class ElevationView : public juce::Component
     {
     public:
+        // Receives callbacks when the user grabs or releases a node. Register
+        // with addListener; a host component can use this to mirror the drag
+        // onto a companion view without the two views knowing each other.
+        class Listener
+        {
+        public:
+            virtual ~Listener() = default;
+
+            // Called when the user presses on the node at the given index,
+            // starting a drag.
+            virtual void nodeDragStarted(ElevationView* view, int index) = 0;
+
+            // Called when the user releases the node at the given index,
+            // ending the drag.
+            virtual void nodeDragEnded(ElevationView* view, int index) = 0;
+        };
+
         ElevationView();
         ~ElevationView() override = default;
+
+        void addListener(Listener* listener);
+        void removeListener(Listener* listener);
 
         // Replaces the nodes with the given positions, one per node, in order.
         // Each point is normalised to the drawing area and clamped to 0..1 on
@@ -47,6 +67,13 @@ namespace rp::uicore
         // The current nodes, normalised 0..1, in node order: x the fixed
         // horizontal position, y the elevation.
         std::vector<juce::Point<float>> getNodes() const;
+
+        // Highlights the node at the given index with the same filled
+        // highlight disc a dragged node uses, or clears the highlight when the
+        // index is -1 (or out of range). Meant for a host component to mark
+        // the node that corresponds to the anchor selected in a companion
+        // view; it does not start a drag.
+        void setHighlightedNode(int index);
 
         // Sets the width (in pixels) of the drawing area the graph is laid out
         // in. The area stays centred in the component; a width wider than the
@@ -87,6 +114,8 @@ namespace rp::uicore
 
         void notifyChange() const;
 
+        juce::ListenerList<Listener> listeners_;
+
         // Normalised nodes: x the fixed horizontal position, y the elevation
         // (0 = top, 1 = bottom).
         std::vector<juce::Point<float>> nodes_;
@@ -97,6 +126,10 @@ namespace rp::uicore
 
         // Index of the node being dragged, or -1 when idle.
         int dragIndex_;
+
+        // Index of the externally highlighted node (setHighlightedNode), or
+        // -1 when none is highlighted.
+        int highlightedIndex_;
 
         // Whether the playhead marker is drawn, and its normalised position
         // (0..1) along the graph.

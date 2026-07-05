@@ -65,6 +65,7 @@ namespace rp::uicore
 
     TrajectoryView::TrajectoryView()
     : selectedIndex_(-1)
+    , highlightedIndex_(-1)
     , dragMode_(Drag::None)
     , clearButton_("clear")
     , waveformButton_("waveform")
@@ -81,6 +82,12 @@ namespace rp::uicore
         waveformButton_.setClickingTogglesState(true);
         waveformButton_.onClick = [this] { repaint(); };
         addAndMakeVisible(waveformButton_);
+    }
+
+    void TrajectoryView::Listener::anchorSelectionChanged(TrajectoryView* /*view*/, int /*selectedIndex*/)
+    {
+        // Does nothing by default: listeners that only track the curve need
+        // not care about the selection.
     }
 
     void TrajectoryView::addListener(Listener* listener)
@@ -113,11 +120,25 @@ namespace rp::uicore
         if (anchors_.empty())
             return;
 
+        const auto hadSelection = selectedIndex_ >= 0;
+
         anchors_.clear();
         selectedIndex_ = -1;
         dragMode_ = Drag::None;
 
         notifyChange();
+        if (hadSelection)
+            notifySelectionChanged();
+
+        repaint();
+    }
+
+    void TrajectoryView::setHighlightedAnchor(int index)
+    {
+        if (highlightedIndex_ == index)
+            return;
+
+        highlightedIndex_ = index;
         repaint();
     }
 
@@ -193,15 +214,17 @@ namespace rp::uicore
                 drawHandle(toPixel(anchor.handleOut));
         }
 
-        // The anchor markers on top: the selected one is a filled highlight disc,
-        // the others hollow foreground rings. Each marker carries its one-based
-        // number above it, so the anchors read 1, 2, 3... from start to end.
+        // The anchor markers on top: the selected one and the externally
+        // highlighted one (the counterpart of a node being dragged in a
+        // companion view) are filled highlight discs, the others hollow
+        // foreground rings. Each marker carries its one-based number above it,
+        // so the anchors read 1, 2, 3... from start to end.
         for (auto i = static_cast<size_t>(0); i < anchors_.size(); ++i)
         {
             const auto centre = toPixel(anchors_[i].position);
             const auto bounds = juce::Rectangle<float>(centre.x - anchorRadius_, centre.y - anchorRadius_, anchorRadius_ * 2.0f, anchorRadius_ * 2.0f);
 
-            if (static_cast<int>(i) == selectedIndex_)
+            if (static_cast<int>(i) == selectedIndex_ || static_cast<int>(i) == highlightedIndex_)
             {
                 g.setColour(styles::highlight);
                 g.fillEllipse(bounds);
@@ -297,6 +320,8 @@ namespace rp::uicore
             // click selects it and arms a possible move.
             if (event.mods.isShiftDown())
             {
+                const auto hadSelection = selectedIndex_ >= 0;
+
                 anchors_.erase(anchors_.begin() + index);
 
                 // Removing an interior anchor leaves its two neighbours joined
@@ -319,12 +344,19 @@ namespace rp::uicore
                 selectedIndex_ = -1;
                 dragMode_ = Drag::None;
                 notifyChange();
+                if (hadSelection)
+                    notifySelectionChanged();
+
                 repaint();
                 return;
             }
 
+            const auto selectionChanged = index != selectedIndex_;
             selectedIndex_ = index;
             dragMode_ = Drag::Anchor;
+            if (selectionChanged)
+                notifySelectionChanged();
+
             repaint();
             return;
         }
@@ -355,7 +387,11 @@ namespace rp::uicore
         selectedIndex_ = static_cast<int>(anchors_.size()) - 1;
         dragMode_ = Drag::Anchor;
 
+        // The curve notification goes out first so listeners that mirror the
+        // anchors into a companion view have the new anchor in place before
+        // they are told it is selected.
         notifyChange();
+        notifySelectionChanged();
         repaint();
     }
 
@@ -502,6 +538,11 @@ namespace rp::uicore
     void TrajectoryView::notifyChange()
     {
         listeners_.call([this](Listener& listener) { listener.trajectoryChanged(this); });
+    }
+
+    void TrajectoryView::notifySelectionChanged()
+    {
+        listeners_.call([this](Listener& listener) { listener.anchorSelectionChanged(this, selectedIndex_); });
     }
 
 }

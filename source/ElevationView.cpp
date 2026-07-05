@@ -37,10 +37,21 @@ namespace rp::uicore
     ElevationView::ElevationView()
     : drawingAreaWidth_(0.0f)
     , dragIndex_(-1)
+    , highlightedIndex_(-1)
     , playheadEnabled_(false)
     , playheadPosition_(0.0f)
     {
         setOpaque(true);
+    }
+
+    void ElevationView::addListener(Listener* listener)
+    {
+        listeners_.add(listener);
+    }
+
+    void ElevationView::removeListener(Listener* listener)
+    {
+        listeners_.remove(listener);
     }
 
     void ElevationView::setNodes(const std::vector<juce::Point<float>>& positions)
@@ -57,6 +68,15 @@ namespace rp::uicore
     std::vector<juce::Point<float>> ElevationView::getNodes() const
     {
         return nodes_;
+    }
+
+    void ElevationView::setHighlightedNode(int index)
+    {
+        if (highlightedIndex_ == index)
+            return;
+
+        highlightedIndex_ = index;
+        repaint();
     }
 
     void ElevationView::setDrawingAreaWidth(float width)
@@ -105,16 +125,18 @@ namespace rp::uicore
             g.strokePath(path, juce::PathStrokeType(lineWidth_));
         }
 
-        // The node markers: the node being dragged is a filled highlight disc,
-        // the others hollow foreground rings. Each marker carries its one-based
-        // number above it, matching the numbering of the trajectory anchors the
-        // nodes were built from.
+        // The node markers: the node being dragged and the externally
+        // highlighted one (the counterpart of the anchor selected in a
+        // companion view) are filled highlight discs, the others hollow
+        // foreground rings. Each marker carries its one-based number above it,
+        // matching the numbering of the trajectory anchors the nodes were
+        // built from.
         for (auto i = 0; i < static_cast<int>(nodes_.size()); ++i)
         {
             const auto centre = nodePixel(i);
             const auto bounds = juce::Rectangle<float>(centre.x - nodeRadius_, centre.y - nodeRadius_, nodeRadius_ * 2.0f, nodeRadius_ * 2.0f);
 
-            if (i == dragIndex_)
+            if (i == dragIndex_ || i == highlightedIndex_)
             {
                 g.setColour(styles::highlight);
                 g.fillEllipse(bounds);
@@ -174,8 +196,11 @@ namespace rp::uicore
         // Nodes can only be grabbed, never created: clicking empty space does
         // nothing.
         dragIndex_ = nodeAt(event.position);
-        if (dragIndex_ >= 0)
-            repaint();
+        if (dragIndex_ < 0)
+            return;
+
+        listeners_.call([this](Listener& listener) { listener.nodeDragStarted(this, dragIndex_); });
+        repaint();
     }
 
     void ElevationView::mouseDrag(const juce::MouseEvent& event)
@@ -199,7 +224,10 @@ namespace rp::uicore
         if (dragIndex_ < 0)
             return;
 
+        const auto releasedIndex = dragIndex_;
         dragIndex_ = -1;
+
+        listeners_.call([this, releasedIndex](Listener& listener) { listener.nodeDragEnded(this, releasedIndex); });
         repaint();
     }
 

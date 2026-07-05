@@ -40,11 +40,12 @@ namespace rp::uicore
     class TrajectoryView : public juce::Component
     {
     public:
-        // Receives notifications whenever the curve changes, following the
-        // JUCE listener convention. Register with addListener and deregister
-        // with removeListener. A companion view (such as ElevationView) is kept
-        // in sync by a host that listens here and pushes the anchors on, so the
-        // two views never reference each other.
+        // Receives notifications whenever the curve or the anchor selection
+        // changes, following the JUCE listener convention. Register with
+        // addListener and deregister with removeListener. A companion view
+        // (such as ElevationView) is kept in sync by a host that listens here
+        // and pushes the anchors on, so the two views never reference each
+        // other.
         class Listener
         {
         public:
@@ -54,6 +55,13 @@ namespace rp::uicore
             // interaction or clear(). Read the new state back through the
             // given view, e.g. getAnchors().
             virtual void trajectoryChanged(TrajectoryView* view) = 0;
+
+            // Called whenever a different anchor becomes selected, or the
+            // selection is cleared. selectedIndex is the index of the newly
+            // selected anchor, or -1 when nothing is selected. Does nothing by
+            // default, so listeners that only track the curve need not
+            // override it.
+            virtual void anchorSelectionChanged(TrajectoryView* view, int selectedIndex);
         };
 
         TrajectoryView();
@@ -73,6 +81,13 @@ namespace rp::uicore
 
         // Removes every anchor, leaving an empty curve.
         void clear();
+
+        // Highlights the anchor at the given index with the same filled
+        // highlight disc a selected anchor uses, or clears the highlight when
+        // the index is -1 (or out of range). Meant for a host component to
+        // mark the anchor that corresponds to a node being edited in a
+        // companion view; it does not change the selection.
+        void setHighlightedAnchor(int index);
 
         // Sets the audio the "waveform" toggle draws along the curve. The data
         // is a single channel of samples in -1..1; passing an empty vector
@@ -151,13 +166,22 @@ namespace rp::uicore
 
         void notifyChange();
 
-        // The registered listeners, notified whenever the curve changes.
+        // Tells every registered listener the current selection, after it has
+        // changed.
+        void notifySelectionChanged();
+
+        // The registered listeners, notified whenever the curve or the anchor
+        // selection changes.
         juce::ListenerList<Listener> listeners_;
 
         std::vector<Anchor> anchors_;
 
         // Index of the selected anchor, or -1 when none is selected.
         int selectedIndex_;
+
+        // Index of the externally highlighted anchor (setHighlightedAnchor),
+        // or -1 when none is highlighted.
+        int highlightedIndex_;
 
         // What the current drag is manipulating, or Drag::None when idle.
         Drag dragMode_;
