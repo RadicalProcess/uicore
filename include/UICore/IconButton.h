@@ -83,4 +83,18 @@ namespace rp::uicore
     public:
         EyeButton();
     };
+
+    // Circular momentary button showing the plus glyph.
+    class PlusButton : public IconButton
+    {
+    public:
+        PlusButton();
+    };
+
+    // Circular momentary button showing the minus glyph.
+    class MinusButton : public IconButton
+    {
+    public:
+        MinusButton();
+    };
 }

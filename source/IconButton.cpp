@@ -112,4 +112,14 @@ namespace rp::uicore
         setShape(Shape::RoundedSquare);
         setClickingTogglesState(true);
     }
+
+    PlusButton::PlusButton()
+    : IconButton(BinaryData::plus_svg, BinaryData::plus_svgSize)
+    {
+    }
+
+    MinusButton::MinusButton()
+    : IconButton(BinaryData::minus_svg, BinaryData::minus_svgSize)
+    {
+    }
 }
