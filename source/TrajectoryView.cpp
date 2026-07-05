@@ -300,9 +300,15 @@ namespace rp::uicore
             {
                 auto& anchor = anchors_[static_cast<size_t>(selectedIndex_)];
                 if (handle == Drag::HandleOut)
+                {
                     anchor.handleOut = defaultHandleOut(selectedIndex_);
+                    anchor.handleOutCustomised = false;
+                }
                 else
+                {
                     anchor.handleIn = defaultHandleIn(selectedIndex_);
+                    anchor.handleInCustomised = false;
+                }
 
                 notifyChange();
                 repaint();
@@ -339,6 +345,8 @@ namespace rp::uicore
                     const auto delta = next.position - previous.position;
                     previous.handleOut = previous.position + delta * outHandleFraction_;
                     next.handleIn = previous.position + delta * inHandleFraction_;
+                    previous.handleOutCustomised = false;
+                    next.handleInCustomised = false;
                 }
 
                 selectedIndex_ = -1;
@@ -381,6 +389,10 @@ namespace rp::uicore
             const auto delta = normalised - previous.position;
             previous.handleOut = previous.position + delta * outHandleFraction_;
             anchor.handleIn = previous.position + delta * inHandleFraction_;
+
+            // The joining segment starts straight, so neither bordering handle
+            // counts as customised yet.
+            previous.handleOutCustomised = false;
         }
 
         anchors_.push_back(anchor);
@@ -407,20 +419,31 @@ namespace rp::uicore
         {
             case Drag::Anchor:
             {
-                // Move the anchor and carry both handles along with it.
+                // Move the anchor. A handle the user has bent keeps its shape
+                // relative to the anchor, so it is carried along by the same
+                // delta; an untouched handle is re-straightened below so the
+                // segment it borders stays straight instead of bending just
+                // because its endpoint moved.
                 const auto delta = normalised - anchor.position;
                 anchor.position = normalised;
-                anchor.handleIn += delta;
-                anchor.handleOut += delta;
+                if (anchor.handleInCustomised)
+                    anchor.handleIn += delta;
+                if (anchor.handleOutCustomised)
+                    anchor.handleOut += delta;
+                straightenUntouchedHandles(selectedIndex_);
                 break;
             }
 
             case Drag::HandleOut:
+                // Dragging a handle bends the adjoining segment; mark it so the
+                // bend survives later anchor moves.
                 anchor.handleOut = normalised;
+                anchor.handleOutCustomised = true;
                 break;
 
             case Drag::HandleIn:
                 anchor.handleIn = normalised;
+                anchor.handleInCustomised = true;
                 break;
 
             case Drag::None:
@@ -487,6 +510,34 @@ namespace rp::uicore
         const auto& anchor = anchors_[static_cast<size_t>(index)];
         const auto& next = anchors_[static_cast<size_t>(index) + 1];
         return anchor.position + (next.position - anchor.position) * outHandleFraction_;
+    }
+
+    void TrajectoryView::straightenUntouchedHandles(int index)
+    {
+        auto& anchor = anchors_[static_cast<size_t>(index)];
+
+        // The incoming segment (previous -> this) is bordered by this anchor's
+        // in handle and the previous anchor's out handle; straighten whichever
+        // of the two the user has not bent.
+        if (showHandleIn(index))
+        {
+            auto& previous = anchors_[static_cast<size_t>(index) - 1];
+            if (!anchor.handleInCustomised)
+                anchor.handleIn = defaultHandleIn(index);
+            if (!previous.handleOutCustomised)
+                previous.handleOut = defaultHandleOut(index - 1);
+        }
+
+        // The outgoing segment (this -> next) is bordered by this anchor's out
+        // handle and the next anchor's in handle.
+        if (showHandleOut(index))
+        {
+            auto& next = anchors_[static_cast<size_t>(index) + 1];
+            if (!anchor.handleOutCustomised)
+                anchor.handleOut = defaultHandleOut(index);
+            if (!next.handleInCustomised)
+                next.handleIn = defaultHandleIn(index + 1);
+        }
     }
 
     void TrajectoryView::buildPath(juce::Path& path) const

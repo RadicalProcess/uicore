@@ -119,11 +119,20 @@ namespace rp::uicore
         // shape the segments on either side of it. handleIn steers the segment
         // arriving from the previous anchor and handleOut the one going to the
         // next; the two move independently. All values are normalised to 0..1.
+        //
+        // handleInCustomised / handleOutCustomised record whether the user has
+        // dragged that handle away from its straight-line default. An untouched
+        // handle is kept on the line between its anchors, so a segment stays
+        // straight until a bordering handle is actually grabbed. Dragging the
+        // anchor re-straightens its untouched handles rather than dragging them
+        // out of place, and resetting a handle (shift-click) clears the flag.
         struct Anchor
         {
             juce::Point<float> position;
             juce::Point<float> handleIn;
             juce::Point<float> handleOut;
+            bool handleInCustomised = false;
+            bool handleOutCustomised = false;
         };
 
         // What the in-progress drag is manipulating.
@@ -153,6 +162,13 @@ namespace rp::uicore
         // straight line. Only valid when the corresponding neighbour exists.
         juce::Point<float> defaultHandleIn(int index) const;
         juce::Point<float> defaultHandleOut(int index) const;
+
+        // Re-straightens every handle bordering the anchor at the given index
+        // that the user has not customised: the anchor's own two handles and the
+        // neighbouring handles that point back at it. Called after an anchor is
+        // moved so its adjoining segments stay straight unless a handle bordering
+        // them was explicitly dragged.
+        void straightenUntouchedHandles(int index);
 
         // Builds the cubic bezier path through the anchors (in pixels).
         void buildPath(juce::Path& path) const;
