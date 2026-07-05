@@ -1,4 +1,5 @@
 #include "UICore/TrajectoryView.h"
+#include "UICore/NodeLabel.h"
 #include "UICore/Style.h"
 
 #include <algorithm>
@@ -80,6 +81,16 @@ namespace rp::uicore
         waveformButton_.setClickingTogglesState(true);
         waveformButton_.onClick = [this] { repaint(); };
         addAndMakeVisible(waveformButton_);
+    }
+
+    void TrajectoryView::addListener(Listener* listener)
+    {
+        listeners_.add(listener);
+    }
+
+    void TrajectoryView::removeListener(Listener* listener)
+    {
+        listeners_.remove(listener);
     }
 
     std::vector<juce::Point<float>> TrajectoryView::getAnchors() const
@@ -183,7 +194,8 @@ namespace rp::uicore
         }
 
         // The anchor markers on top: the selected one is a filled highlight disc,
-        // the others hollow foreground rings.
+        // the others hollow foreground rings. Each marker carries its one-based
+        // number above it, so the anchors read 1, 2, 3... from start to end.
         for (auto i = static_cast<size_t>(0); i < anchors_.size(); ++i)
         {
             const auto centre = toPixel(anchors_[i].position);
@@ -201,6 +213,8 @@ namespace rp::uicore
                 g.setColour(styles::foreground);
                 g.drawEllipse(bounds, lineWidth_);
             }
+
+            drawNodeLabel(g, centre, anchorRadius_, static_cast<int>(i) + 1);
         }
 
         // The playhead riding along the curve, drawn on top of everything so the
@@ -467,10 +481,9 @@ namespace rp::uicore
         return Drag::None;
     }
 
-    void TrajectoryView::notifyChange() const
+    void TrajectoryView::notifyChange()
     {
-        if (onChange)
-            onChange();
+        listeners_.call([this](Listener& listener) { listener.trajectoryChanged(this); });
     }
 
 }
