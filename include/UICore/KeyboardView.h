@@ -43,6 +43,7 @@ namespace rp::uicore
         int getSelection() const noexcept;
 
     protected:
+        void resized() override;
         void drawWhiteNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
                            bool isDown, bool isOver, juce::Colour lineColour, juce::Colour textColour) override;
         void drawBlackNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
