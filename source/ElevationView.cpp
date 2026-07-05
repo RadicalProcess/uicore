@@ -17,6 +17,14 @@ namespace rp::uicore
         const auto lineWidth_ = 2.0f;
         const auto frameWidth_ = 1.5f;
 
+        // The playhead is a short line crossing the graph at right angles:
+        // playheadHalfLength_ is how far it reaches either side of the graph,
+        // playheadThickness_ its stroke width, and playheadTangentStep_ the small
+        // step (in pixels) used to estimate the graph tangent at the playhead.
+        const auto playheadHalfLength_ = 9.0f;
+        const auto playheadThickness_ = 2.5f;
+        const auto playheadTangentStep_ = 2.0f;
+
         // Colour of the drawing-area frame and the zero-elevation line: dim
         // enough to read as a backdrop without competing with the graph.
         const auto frameColour_ = juce::Colour(90, 90, 90);
@@ -28,6 +36,8 @@ namespace rp::uicore
     ElevationView::ElevationView()
     : drawingAreaWidth_(0.0f)
     , dragIndex_(-1)
+    , playheadEnabled_(false)
+    , playheadPosition_(0.0f)
     {
         setOpaque(true);
     }
@@ -54,6 +64,18 @@ namespace rp::uicore
         repaint();
     }
 
+    void ElevationView::setPlayheadEnabled(bool enabled)
+    {
+        playheadEnabled_ = enabled;
+        repaint();
+    }
+
+    void ElevationView::setPlayheadPosition(float position)
+    {
+        playheadPosition_ = std::clamp(position, 0.0f, 1.0f);
+        repaint();
+    }
+
     void ElevationView::paint(juce::Graphics& g)
     {
         g.fillAll(backgroundColour_);
@@ -68,10 +90,12 @@ namespace rp::uicore
         if (nodes_.empty())
             return;
 
-        // The straight segments joining the nodes in order.
-        if (nodes_.size() >= 2)
+        // The straight segments joining the nodes in order, built once and
+        // reused for the playhead.
+        juce::Path path;
+        const auto hasGraph = nodes_.size() >= 2;
+        if (hasGraph)
         {
-            juce::Path path;
             path.startNewSubPath(nodePixel(0));
             for (auto i = 1; i < static_cast<int>(nodes_.size()); ++i)
                 path.lineTo(nodePixel(i));
@@ -99,6 +123,39 @@ namespace rp::uicore
                 g.setColour(styles::foreground);
                 g.drawEllipse(bounds, frameWidth_);
             }
+        }
+
+        // The playhead riding along the graph, drawn on top of everything so the
+        // playback position stays visible. It is a short line crossing the graph
+        // perpendicular to its tangent, in the highlight colour, to match the
+        // TrajectoryView playhead.
+        if (hasGraph && playheadEnabled_)
+        {
+            const auto totalLength = path.getLength();
+            const auto distance = playheadPosition_ * totalLength;
+            const auto centre = path.getPointAlongPath(distance);
+
+            // Estimate the tangent from points either side of the playhead. A
+            // kink in the graph can make a small step degenerate (both points
+            // coincide), so widen the step until it yields a direction; this
+            // keeps the crossing line perpendicular everywhere. Only a
+            // zero-length graph leaves the fallback vertical normal in place.
+            auto normal = juce::Point<float>(0.0f, 1.0f);
+            for (auto step = playheadTangentStep_; step <= totalLength; step *= 2.0f)
+            {
+                const auto behind = path.getPointAlongPath(std::max(0.0f, distance - step));
+                const auto ahead = path.getPointAlongPath(std::min(totalLength, distance + step));
+                const auto tangent = ahead - behind;
+                const auto tangentLength = tangent.getDistanceFromOrigin();
+                if (tangentLength > 0.0f)
+                {
+                    normal = juce::Point<float>(-tangent.y, tangent.x) / tangentLength;
+                    break;
+                }
+            }
+
+            g.setColour(styles::highlight);
+            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), playheadThickness_);
         }
     }
 
