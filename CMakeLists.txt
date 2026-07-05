@@ -35,7 +35,7 @@ juce_add_binary_data(UIResource
         SOURCES
         resource/RobotoCondensed.ttf
         resource/Logo.png
-        resource/head_lowpoly.obj
+        resource/dummyhead.obj
         resource/icons/play.svg
         resource/icons/pause.svg
         resource/icons/stop.svg

@@ -135,8 +135,8 @@ namespace rp::uicore
         // Load the bundled head model and normalise it so its centre sits at the
         // origin regardless of the source file's units or origin.
         ObjModel model;
-        model.loadFromString(juce::String::createStringFromData(BinaryData::head_lowpoly_obj,
-                                                                BinaryData::head_lowpoly_objSize));
+        model.loadFromString(juce::String::createStringFromData(BinaryData::dummyhead_obj,
+                                                                BinaryData::dummyhead_objSize));
 
         const auto centre = model.getCentre();
         const auto maxExtent = model.getMaxExtent();
