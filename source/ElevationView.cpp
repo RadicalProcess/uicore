@@ -32,20 +32,20 @@ namespace rp::uicore
         setOpaque(true);
     }
 
-    void ElevationView::setNodes(const std::vector<float>& positions)
+    void ElevationView::setNodes(const std::vector<juce::Point<float>>& positions)
     {
-        values_.clear();
-        values_.reserve(positions.size());
-        for (const auto position : positions)
-            values_.push_back(std::clamp(position, 0.0f, 1.0f));
+        nodes_.clear();
+        nodes_.reserve(positions.size());
+        for (const auto& position : positions)
+            nodes_.push_back({ std::clamp(position.x, 0.0f, 1.0f), std::clamp(position.y, 0.0f, 1.0f) });
 
         dragIndex_ = -1;
         repaint();
     }
 
-    std::vector<float> ElevationView::getNodes() const
+    std::vector<juce::Point<float>> ElevationView::getNodes() const
     {
-        return values_;
+        return nodes_;
     }
 
     void ElevationView::setDrawingAreaWidth(float width)
@@ -65,15 +65,15 @@ namespace rp::uicore
         g.drawRect(area, frameWidth_);
         g.drawLine(area.getX(), area.getCentreY(), area.getRight(), area.getCentreY(), frameWidth_);
 
-        if (values_.empty())
+        if (nodes_.empty())
             return;
 
         // The straight segments joining the nodes in order.
-        if (values_.size() >= 2)
+        if (nodes_.size() >= 2)
         {
             juce::Path path;
             path.startNewSubPath(nodePixel(0));
-            for (auto i = 1; i < static_cast<int>(values_.size()); ++i)
+            for (auto i = 1; i < static_cast<int>(nodes_.size()); ++i)
                 path.lineTo(nodePixel(i));
 
             g.setColour(styles::foreground);
@@ -82,7 +82,7 @@ namespace rp::uicore
 
         // The node markers: the node being dragged is a filled highlight disc,
         // the others hollow foreground rings.
-        for (auto i = 0; i < static_cast<int>(values_.size()); ++i)
+        for (auto i = 0; i < static_cast<int>(nodes_.size()); ++i)
         {
             const auto centre = nodePixel(i);
             const auto bounds = juce::Rectangle<float>(centre.x - nodeRadius_, centre.y - nodeRadius_, nodeRadius_ * 2.0f, nodeRadius_ * 2.0f);
@@ -121,12 +121,12 @@ namespace rp::uicore
         if (dragIndex_ < 0)
             return;
 
-        // A node moves vertically only; its horizontal slot is fixed. Map the
-        // pointer's y into the drawing area and clamp to 0..1.
+        // A node moves vertically only; its horizontal position is fixed. Map
+        // the pointer's y into the drawing area and clamp to 0..1.
         const auto area = drawingArea();
         const auto height = area.getHeight();
         const auto value = (height > 0.0f) ? (event.position.y - area.getY()) / height : 0.0f;
-        values_[static_cast<size_t>(dragIndex_)] = std::clamp(value, 0.0f, 1.0f);
+        nodes_[static_cast<size_t>(dragIndex_)].y = std::clamp(value, 0.0f, 1.0f);
 
         notifyChange();
         repaint();
@@ -155,20 +155,16 @@ namespace rp::uicore
     juce::Point<float> ElevationView::nodePixel(int index) const
     {
         const auto area = drawingArea();
-        const auto count = static_cast<int>(values_.size());
+        const auto& node = nodes_[static_cast<size_t>(index)];
 
-        // Evenly space the nodes across the width; a lone node sits centred.
-        const auto x = (count > 1) ? area.getX() + area.getWidth() * static_cast<float>(index) / static_cast<float>(count - 1) : area.getCentreX();
-        const auto y = area.getY() + values_[static_cast<size_t>(index)] * area.getHeight();
-
-        return { x, y };
+        return { area.getX() + node.x * area.getWidth(), area.getY() + node.y * area.getHeight() };
     }
 
     int ElevationView::nodeAt(juce::Point<float> point) const
     {
         const auto reach = nodeRadius_ + nodeHitMargin_;
 
-        for (auto i = 0; i < static_cast<int>(values_.size()); ++i)
+        for (auto i = 0; i < static_cast<int>(nodes_.size()); ++i)
         {
             if (point.getDistanceFrom(nodePixel(i)) <= reach)
                 return i;
