@@ -48,6 +48,16 @@ namespace rp::uicore
         // component is clamped to what fits.
         void setDrawingAreaWidth(float width);
 
+        // Shows or hides the playhead: a short line that crosses the graph at
+        // the position set by setPlayheadPosition. Hidden by default, and only
+        // ever drawn while the graph has at least two nodes. The line uses the
+        // highlight colour to match the TrajectoryView playhead.
+        void setPlayheadEnabled(bool enabled);
+
+        // The normalised position of the playhead along the graph, 0 at the
+        // first node and 1 at the last node. Values are clamped to 0..1.
+        void setPlayheadPosition(float position);
+
         // Invoked whenever the user drags a node to a new elevation.
         std::function<void()> onChange;
 
@@ -82,6 +92,11 @@ namespace rp::uicore
 
         // Index of the node being dragged, or -1 when idle.
         int dragIndex_;
+
+        // Whether the playhead marker is drawn, and its normalised position
+        // (0..1) along the graph.
+        bool playheadEnabled_;
+        float playheadPosition_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ElevationView)
     };
