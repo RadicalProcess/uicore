@@ -9,13 +9,12 @@ namespace rp::uicore
 
     namespace
     {
-        // Half the side length (in pixels) of the square node handles, also used
-        // as the inset of the plot area so a handle at an edge stays fully
-        // visible.
+        // Radius (in pixels) of the circular node handles, also used as the
+        // inset of the plot area so a handle at an edge stays fully visible.
         const auto nodeHalfSize_ = 6.0f;
 
         // Extra slack (in pixels) added around a handle when hit testing so the
-        // small squares are comfortable to grab.
+        // small circles are comfortable to grab.
         const auto nodeHitMargin_ = 4.0f;
 
         // Thickness of the connecting segments and the handle outlines.
@@ -215,21 +214,27 @@ namespace rp::uicore
             g.strokePath(path, juce::PathStrokeType(lineWidth_));
         }
 
-        // The node handles drawn on top: hollow squares whose interior matches
-        // the background, with the dragged one picked out in the highlight
-        // colour.
-        const auto side = nodeHalfSize_ * 2.0f;
+        // The node handles drawn on top: hollow circles whose interior matches
+        // the background, with the dragged one filled in the highlight colour,
+        // matching the anchor/node style of the trajectory and elevation views.
+        const auto diameter = nodeHalfSize_ * 2.0f;
         for (auto i = static_cast<size_t>(0); i < points_.size(); ++i)
         {
             const auto pixel = toPixel(points_[i]);
-            const auto square = juce::Rectangle<float>(pixel.x - nodeHalfSize_, pixel.y - nodeHalfSize_, side, side);
+            const auto bounds = juce::Rectangle<float>(pixel.x - nodeHalfSize_, pixel.y - nodeHalfSize_, diameter, diameter);
 
-            g.setColour(juce::Colour(30, 30, 30));
-            g.fillRect(square);
-
-            const auto outline = (static_cast<int>(i) == draggedIndex_) ? styles::highlight : styles::foreground;
-            g.setColour(outline);
-            g.drawRect(square, lineWidth_);
+            if (static_cast<int>(i) == draggedIndex_)
+            {
+                g.setColour(styles::highlight);
+                g.fillEllipse(bounds);
+            }
+            else
+            {
+                g.setColour(juce::Colour(30, 30, 30));
+                g.fillEllipse(bounds);
+                g.setColour(styles::foreground);
+                g.drawEllipse(bounds, lineWidth_);
+            }
         }
     }
 
