@@ -1,4 +1,5 @@
 #include <UICore/KeyboardView.h>
+#include <UICore/Style.h>
 
 namespace rp::uicore
 {
@@ -15,7 +16,7 @@ namespace rp::uicore
         // Semitone offset of the A notes within an octave (C == 0).
         constexpr int kNoteA = 9;
 
-        const juce::Colour kSelectionColour = juce::Colours::red;
+        const juce::Colour kSelectionColour = styles::highlight;
     }
 
     KeyboardView::KeyboardView(juce::MidiKeyboardState& state, Orientation orientation)
@@ -119,7 +120,7 @@ namespace rp::uicore
     {
         const auto outline = area.reduced(1.0f);
         g.setColour(kSelectionColour);
-        g.drawRect(outline, 2.0f);
+        g.drawRect(outline, styles::guideStroke);
     }
 
     const juce::Colour* KeyboardView::findColor(int midiNoteNumber) const

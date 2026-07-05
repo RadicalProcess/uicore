@@ -1,4 +1,6 @@
 #include "UICore/MotionView.h"
+#include "UICore/Font.h"
+#include "UICore/NodeLabel.h"
 #include "UICore/Style.h"
 
 #include <algorithm>
@@ -16,9 +18,6 @@ namespace rp::uicore
         // Extra slack (in pixels) added around a handle when hit testing so the
         // small circles are comfortable to grab.
         const auto nodeHitMargin_ = 4.0f;
-
-        // Thickness of the connecting segments and the handle outlines.
-        const auto lineWidth_ = 1.5f;
 
         // Smallest horizontal gap (normalised) kept between a dragged interior
         // node and its neighbours so the nodes never cross and stay ordered.
@@ -39,10 +38,6 @@ namespace rp::uicore
         // and the gap kept between that number and where its line starts.
         const auto referenceLabelWidth_ = 14.0f;
         const auto referenceLabelGap_ = 4.0f;
-
-        // Colour of the reference lines and their labels: dim enough to read as
-        // background guides without competing with the curve.
-        const auto referenceColour_ = juce::Colour(90, 90, 90);
 
         // How close (in pixels) the cursor must be to a segment to hover or grab
         // it for bending.
@@ -172,10 +167,10 @@ namespace rp::uicore
 
     void MotionView::paint(juce::Graphics& g)
     {
-        g.fillAll(juce::Colour(30, 30, 30));
+        g.fillAll(styles::canvasBackground);
 
-        g.setColour(juce::Colour(60, 60, 60));
-        g.drawRect(getLocalBounds(), 1);
+        g.setColour(styles::frame);
+        g.drawRect(getLocalBounds().toFloat(), styles::hairlineStroke);
 
         // The backdrop layers, all drawn into the same plot area as the curve so
         // they share its coordinate space and sit behind the nodes: first the
@@ -185,7 +180,7 @@ namespace rp::uicore
         waveformRenderer_.paintWaveform(g, area, styles::foreground.withAlpha(backdropWaveformAlpha_));
         waveformRenderer_.paintPlayhead(g, area, styles::highlight.withAlpha(backdropPlayheadAlpha_));
 
-        g.setFont(referenceLabelHeight_);
+        g.setFont(getRobotoCondensed().withHeight(referenceLabelHeight_));
         for (auto i = static_cast<size_t>(0); i < referenceLines_.size(); ++i)
         {
             const auto y = toPixel({ 0.0f, referenceLines_[i] }).y;
@@ -194,7 +189,7 @@ namespace rp::uicore
             // line; the line itself starts just to its right.
             const auto lineStart = area.getX() + referenceLabelWidth_ + referenceLabelGap_;
 
-            g.setColour(referenceColour_);
+            g.setColour(styles::frame);
             g.drawHorizontalLine(juce::roundToInt(y), lineStart, area.getRight());
 
             const auto label = juce::String(static_cast<int>(i) + 1);
@@ -211,30 +206,16 @@ namespace rp::uicore
 
             const auto highlighted = (i == hoveredIndex_) || (i == bentIndex_);
             g.setColour(highlighted ? styles::highlight : styles::foreground);
-            g.strokePath(path, juce::PathStrokeType(lineWidth_));
+            g.strokePath(path, juce::PathStrokeType(styles::guideStroke));
         }
 
-        // The node handles drawn on top: hollow circles whose interior matches
-        // the background, with the dragged one filled in the highlight colour,
-        // matching the anchor/node style of the trajectory and elevation views.
-        const auto diameter = nodeHalfSize_ * 2.0f;
+        // The node handles drawn on top, in the shared marker style: hollow
+        // foreground rings over the background, with the dragged one filled in
+        // the highlight colour, matching the trajectory and elevation views.
         for (auto i = static_cast<size_t>(0); i < points_.size(); ++i)
         {
             const auto pixel = toPixel(points_[i]);
-            const auto bounds = juce::Rectangle<float>(pixel.x - nodeHalfSize_, pixel.y - nodeHalfSize_, diameter, diameter);
-
-            if (static_cast<int>(i) == draggedIndex_)
-            {
-                g.setColour(styles::highlight);
-                g.fillEllipse(bounds);
-            }
-            else
-            {
-                g.setColour(juce::Colour(30, 30, 30));
-                g.fillEllipse(bounds);
-                g.setColour(styles::foreground);
-                g.drawEllipse(bounds, lineWidth_);
-            }
+            drawNodeMarker(g, pixel, nodeHalfSize_, static_cast<int>(i) == draggedIndex_);
         }
     }
 

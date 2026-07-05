@@ -1,4 +1,6 @@
 #include "GestureView.h"
+#include "Font.h"
+#include "Style.h"
 
 namespace rp::uicore
 {
@@ -40,7 +42,7 @@ namespace rp::uicore
         // The gesture name is the only editable field.
         nameLabel_.setBounds(90, 7, 200, 26);
         nameLabel_.setEditable(true);
-        nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
+        nameLabel_.setColour(juce::Label::backgroundColourId, styles::canvasBackground.brighter(0.2f));
         addAndMakeVisible(nameLabel_);
         soundfileLabel_.setBounds(5, 50, 140, 20);
         addAndMakeVisible(soundfileLabel_);
@@ -54,9 +56,9 @@ namespace rp::uicore
 
     void GestureView::paint(juce::Graphics &g)
     {
-        g.fillAll(juce::Colours::black);
-        g.setColour(juce::Colour(juce::Colours::white));
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.0f, 1.0f);
+        g.fillAll(styles::canvasBackground);
+        g.setColour(styles::foreground);
+        g.drawRoundedRectangle(getLocalBounds().toFloat(), styles::cornerRadius, styles::hairlineStroke);
         if (!fileDragActive_)
             return;
 
@@ -64,13 +66,14 @@ namespace rp::uicore
         // file currently being dragged over it.
         const auto bounds = getLocalBounds();
 
-        g.setColour(juce::Colours::cornflowerblue.withAlpha(0.2f));
+        g.setColour(styles::highlight.withAlpha(0.2f));
         g.fillRect(bounds);
 
-        g.setColour(juce::Colours::cornflowerblue);
-        g.drawRect(bounds, 3);
+        g.setColour(styles::highlight);
+        g.drawRect(bounds.toFloat(), styles::heavyStroke);
 
-        g.setColour(juce::Colours::white);
+        g.setColour(styles::text);
+        g.setFont(getRobotoCondensed());
         g.drawText("Drop a mono .wav / .aiff soundfile here",
                    bounds.reduced(6), juce::Justification::centredBottom, false);
     }

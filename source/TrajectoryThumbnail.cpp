@@ -1,4 +1,5 @@
 #include "TrajectoryThumbnail.h"
+#include "Style.h"
 
 namespace rp::uicore
 {
@@ -8,7 +9,7 @@ namespace rp::uicore
 
     void TrajectoryThumbnail::paint(juce::Graphics &g)
     {
-        g.fillAll(juce::Colours::grey);
+        g.fillAll(styles::canvasBackground);
     }
 
 }

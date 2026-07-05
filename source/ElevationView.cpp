@@ -14,24 +14,12 @@ namespace rp::uicore
         const auto nodeRadius_ = 5.0f;
         const auto nodeHitMargin_ = 4.0f;
 
-        // Thickness of the segmented line, and of the frame and zero lines.
-        const auto lineWidth_ = 2.0f;
-        const auto frameWidth_ = 1.5f;
-
         // The playhead is a short line crossing the graph at right angles:
         // playheadHalfLength_ is how far it reaches either side of the graph,
-        // playheadThickness_ its stroke width, and playheadTangentStep_ the small
-        // step (in pixels) used to estimate the graph tangent at the playhead.
+        // and playheadTangentStep_ the small step (in pixels) used to estimate
+        // the graph tangent at the playhead.
         const auto playheadHalfLength_ = 9.0f;
-        const auto playheadThickness_ = 2.5f;
         const auto playheadTangentStep_ = 2.0f;
-
-        // Colour of the drawing-area frame and the zero-elevation line: dim
-        // enough to read as a backdrop without competing with the graph.
-        const auto frameColour_ = juce::Colour(90, 90, 90);
-
-        // The background the view fills itself with.
-        const auto backgroundColour_ = juce::Colour(30, 30, 30);
     }
 
     ElevationView::ElevationView()
@@ -99,14 +87,14 @@ namespace rp::uicore
 
     void ElevationView::paint(juce::Graphics& g)
     {
-        g.fillAll(backgroundColour_);
+        g.fillAll(styles::canvasBackground);
 
         const auto area = drawingArea();
 
         // The drawing-area frame and the zero-elevation line across its middle.
-        g.setColour(frameColour_);
-        g.drawRect(area, frameWidth_);
-        g.drawLine(area.getX(), area.getCentreY(), area.getRight(), area.getCentreY(), frameWidth_);
+        g.setColour(styles::frame);
+        g.drawRect(area, styles::guideStroke);
+        g.drawLine(area.getX(), area.getCentreY(), area.getRight(), area.getCentreY(), styles::guideStroke);
 
         if (nodes_.empty())
             return;
@@ -122,7 +110,7 @@ namespace rp::uicore
                 path.lineTo(nodePixel(i));
 
             g.setColour(styles::foreground);
-            g.strokePath(path, juce::PathStrokeType(lineWidth_));
+            g.strokePath(path, juce::PathStrokeType(styles::curveStroke));
         }
 
         // The node markers: the node being dragged and the externally
@@ -134,21 +122,7 @@ namespace rp::uicore
         for (auto i = 0; i < static_cast<int>(nodes_.size()); ++i)
         {
             const auto centre = nodePixel(i);
-            const auto bounds = juce::Rectangle<float>(centre.x - nodeRadius_, centre.y - nodeRadius_, nodeRadius_ * 2.0f, nodeRadius_ * 2.0f);
-
-            if (i == dragIndex_ || i == highlightedIndex_)
-            {
-                g.setColour(styles::highlight);
-                g.fillEllipse(bounds);
-            }
-            else
-            {
-                g.setColour(backgroundColour_);
-                g.fillEllipse(bounds);
-                g.setColour(styles::foreground);
-                g.drawEllipse(bounds, frameWidth_);
-            }
-
+            drawNodeMarker(g, centre, nodeRadius_, i == dragIndex_ || i == highlightedIndex_);
             drawNodeLabel(g, centre, nodeRadius_, i + 1);
         }
 
@@ -182,7 +156,7 @@ namespace rp::uicore
             }
 
             g.setColour(styles::highlight);
-            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), playheadThickness_);
+            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), styles::playheadStroke);
         }
     }
 

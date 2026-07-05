@@ -19,17 +19,6 @@ namespace rp::uicore
         const auto handleRadius_ = 4.0f;
         const auto handleHitMargin_ = 4.0f;
 
-        // Thickness of the curve, the frame and the handle lines.
-        const auto curveWidth_ = 2.0f;
-        const auto lineWidth_ = 1.5f;
-
-        // Colour of the static square-and-circle reference frame: dim enough to
-        // read as a backdrop without competing with the curve.
-        const auto frameColour_ = juce::Colour(90, 90, 90);
-
-        // The background the view fills itself with.
-        const auto backgroundColour_ = juce::Colour(30, 30, 30);
-
         // Size (in pixels) of the square clear button tucked into the top-right
         // corner, and the margin kept around it.
         const auto clearButtonSize_ = 22;
@@ -50,10 +39,9 @@ namespace rp::uicore
 
         // The playhead is a short line crossing the curve at right angles:
         // playheadHalfLength_ is how far it reaches either side of the curve,
-        // playheadThickness_ its stroke width, and playheadTangentStep_ the small
-        // step (in pixels) used to estimate the curve tangent at the playhead.
+        // and playheadTangentStep_ the small step (in pixels) used to estimate
+        // the curve tangent at the playhead.
         const auto playheadHalfLength_ = 9.0f;
-        const auto playheadThickness_ = 2.5f;
         const auto playheadTangentStep_ = 2.0f;
 
         // Fractions along a fresh straight segment where the two joining handles
@@ -163,13 +151,13 @@ namespace rp::uicore
 
     void TrajectoryView::paint(juce::Graphics& g)
     {
-        g.fillAll(backgroundColour_);
+        g.fillAll(styles::canvasBackground);
 
         // The static reference frame: a centred square with an inscribed circle.
         const auto square = squareArea();
-        g.setColour(frameColour_);
-        g.drawRect(square, lineWidth_);
-        g.drawEllipse(square, lineWidth_);
+        g.setColour(styles::frame);
+        g.drawRect(square, styles::guideStroke);
+        g.drawEllipse(square, styles::guideStroke);
 
         // The bezier curve through the anchors, built once and reused for the
         // waveform and the playhead, with the optional waveform drawn along it
@@ -187,7 +175,7 @@ namespace rp::uicore
             }
 
             g.setColour(styles::foreground);
-            g.strokePath(path, juce::PathStrokeType(curveWidth_));
+            g.strokePath(path, juce::PathStrokeType(styles::curveStroke));
         }
 
         // The control handles of the selected anchor, drawn under the anchor
@@ -201,8 +189,8 @@ namespace rp::uicore
 
             const auto drawHandle = [&g, centre](juce::Point<float> knob)
             {
-                g.setColour(frameColour_);
-                g.drawLine({ centre, knob }, lineWidth_);
+                g.setColour(styles::frame);
+                g.drawLine({ centre, knob }, styles::guideStroke);
                 g.setColour(styles::highlight);
                 g.fillEllipse(knob.x - handleRadius_, knob.y - handleRadius_, handleRadius_ * 2.0f, handleRadius_ * 2.0f);
             };
@@ -222,21 +210,8 @@ namespace rp::uicore
         for (auto i = static_cast<size_t>(0); i < anchors_.size(); ++i)
         {
             const auto centre = toPixel(anchors_[i].position);
-            const auto bounds = juce::Rectangle<float>(centre.x - anchorRadius_, centre.y - anchorRadius_, anchorRadius_ * 2.0f, anchorRadius_ * 2.0f);
-
-            if (static_cast<int>(i) == selectedIndex_ || static_cast<int>(i) == highlightedIndex_)
-            {
-                g.setColour(styles::highlight);
-                g.fillEllipse(bounds);
-            }
-            else
-            {
-                g.setColour(backgroundColour_);
-                g.fillEllipse(bounds);
-                g.setColour(styles::foreground);
-                g.drawEllipse(bounds, lineWidth_);
-            }
-
+            const auto highlighted = static_cast<int>(i) == selectedIndex_ || static_cast<int>(i) == highlightedIndex_;
+            drawNodeMarker(g, centre, anchorRadius_, highlighted);
             drawNodeLabel(g, centre, anchorRadius_, static_cast<int>(i) + 1);
         }
 
@@ -270,7 +245,7 @@ namespace rp::uicore
             }
 
             g.setColour(styles::highlight);
-            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), playheadThickness_);
+            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), styles::playheadStroke);
         }
     }
 

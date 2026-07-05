@@ -1,4 +1,5 @@
 #include "UICore/Waveform.h"
+#include "UICore/Font.h"
 #include "UICore/Style.h"
 
 #include <algorithm>
@@ -42,10 +43,10 @@ namespace rp::uicore
 
     void Waveform::paint(juce::Graphics& g)
     {
-        g.fillAll(juce::Colour(30, 30, 30));
+        g.fillAll(styles::canvasBackground);
 
-        g.setColour(juce::Colour(60, 60, 60));
-        g.drawRect(getLocalBounds(), 1);
+        g.setColour(styles::frame);
+        g.drawRect(getLocalBounds().toFloat(), styles::hairlineStroke);
 
         if (!renderer_.isEmpty())
         {
@@ -59,8 +60,8 @@ namespace rp::uicore
         }
         else
         {
-            g.setColour(juce::Colour(120, 120, 120));
-            g.setFont(juce::FontOptions(14.0f));
+            g.setColour(styles::mutedText);
+            g.setFont(getRobotoCondensed().withHeight(14.0f));
             g.drawText("No audio file selected", getLocalBounds(), juce::Justification::centred);
         }
     }
@@ -295,8 +296,8 @@ namespace rp::uicore
         g.fillRect(selectionBounds);
 
         g.setColour(styles::highlight);
-        g.drawLine(startX, bounds.getY(), startX, bounds.getBottom(), 1.0f);
-        g.drawLine(endX, bounds.getY(), endX, bounds.getBottom(), 1.0f);
+        g.drawLine(startX, bounds.getY(), startX, bounds.getBottom(), styles::hairlineStroke);
+        g.drawLine(endX, bounds.getY(), endX, bounds.getBottom(), styles::hairlineStroke);
     }
 
     void Waveform::paintFades(juce::Graphics& g) const
@@ -327,7 +328,7 @@ namespace rp::uicore
             g.fillPath(covered);
 
             g.setColour(fadeColour);
-            g.drawLine(leftX, bottom, fadeInEndX, top, 1.5f);
+            g.drawLine(leftX, bottom, fadeInEndX, top, styles::guideStroke);
         }
 
         const auto fadeOutStartX = rightX - fadeOutRatio_ * width;
@@ -342,7 +343,7 @@ namespace rp::uicore
             g.fillPath(covered);
 
             g.setColour(fadeColour);
-            g.drawLine(fadeOutStartX, top, rightX, bottom, 1.5f);
+            g.drawLine(fadeOutStartX, top, rightX, bottom, styles::guideStroke);
         }
 
         // Draw the grab handles last so they sit on top of the slopes. Each is a

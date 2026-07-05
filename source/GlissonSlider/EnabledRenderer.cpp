@@ -41,7 +41,7 @@ namespace rp::uicore::glisson
         {
             const auto pointA = knobs_[i*2]->getPoint();
             const auto pointB = knobs_[i*2+1]->getPoint();
-            g.drawLine(pointA.getX(), pointA.getY(), pointB.getX(), pointB.getY(), 3.f);
+            g.drawLine(pointA.getX(), pointA.getY(), pointB.getX(), pointB.getY(), styles::heavyStroke);
         }
 
         g.setColour(styles::foreground);

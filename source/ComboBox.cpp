@@ -9,11 +9,11 @@ namespace rp::uicore
     public:
         ComboBoxLookAndFeel()
         {
-            setColour(juce::PopupMenu::backgroundColourId, juce::Colours::black);
+            setColour(juce::PopupMenu::backgroundColourId, styles::canvasBackground);
             setColour(juce::ComboBox::textColourId, styles::text);
-            setColour(juce::ComboBox::backgroundColourId, juce::Colours::black);
-            setColour(juce::ComboBox::outlineColourId, juce::Colours::white);
-            setColour(juce::ComboBox::buttonColourId, juce::Colours::black);
+            setColour(juce::ComboBox::backgroundColourId, styles::canvasBackground);
+            setColour(juce::ComboBox::outlineColourId, styles::foreground);
+            setColour(juce::ComboBox::buttonColourId, styles::canvasBackground);
             setColour(juce::ComboBox::arrowColourId, styles::text);
             setColour(juce::ComboBox::focusedOutlineColourId, styles::highlight);
         }
@@ -37,7 +37,7 @@ namespace rp::uicore
             }
             else
             {
-                const auto textColour = juce::Colours::white;
+                const auto textColour = styles::text;
 
                 auto r = area.reduced(1);
 
@@ -101,7 +101,7 @@ namespace rp::uicore
             path.lineTo((float) arrowZone.getRight() - 3.0f, (float) arrowZone.getCentreY() - 2.0f);
 
             g.setColour(box.findColour(ComboBox::arrowColourId).withAlpha((box.isEnabled() ? 0.9f : 0.2f)));
-            g.strokePath(path, PathStrokeType(1.0f));
+            g.strokePath(path, PathStrokeType(styles::hairlineStroke));
         }
 
         juce::Font getComboBoxFont(juce::ComboBox&) override

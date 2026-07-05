@@ -1,4 +1,5 @@
 #include "UICore/WaveformRenderer.h"
+#include "UICore/Style.h"
 
 #include <algorithm>
 #include <cmath>
@@ -253,7 +254,7 @@ namespace rp::uicore
 
         const auto playbackX = bounds.getX() + playheadPositionRatio_ * bounds.getWidth();
         g.setColour(colour);
-        g.drawLine(playbackX, bounds.getY(), playbackX, bounds.getBottom(), 2.0f);
+        g.drawLine(playbackX, bounds.getY(), playbackX, bounds.getBottom(), styles::playheadStroke);
     }
 
 }
