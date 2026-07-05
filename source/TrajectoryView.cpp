@@ -298,6 +298,24 @@ namespace rp::uicore
             if (event.mods.isShiftDown())
             {
                 anchors_.erase(anchors_.begin() + index);
+
+                // Removing an interior anchor leaves its two neighbours joined
+                // by a new segment. The bordering handles still lean towards the
+                // removed anchor, which bends the fresh segment. Reset them to
+                // their straight-line defaults so the reconnected anchors are
+                // linked by a straight line, matching how a freshly appended
+                // anchor joins the previous one.
+                const auto hasPrevious = index > 0;
+                const auto hasNext = index < static_cast<int>(anchors_.size());
+                if (hasPrevious && hasNext)
+                {
+                    auto& previous = anchors_[static_cast<size_t>(index) - 1];
+                    auto& next = anchors_[static_cast<size_t>(index)];
+                    const auto delta = next.position - previous.position;
+                    previous.handleOut = previous.position + delta * outHandleFraction_;
+                    next.handleIn = previous.position + delta * inHandleFraction_;
+                }
+
                 selectedIndex_ = -1;
                 dragMode_ = Drag::None;
                 notifyChange();
