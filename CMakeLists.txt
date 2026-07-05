@@ -14,6 +14,7 @@ add_library(UICore
         source/OpenGLView.cpp
         source/ObjModel.cpp
         source/ImageToggleButton.cpp
+        source/IconButton.cpp
         source/GlissonSlider/HorizontalKnob.cpp
         source/GlissonSlider/VerticalKnob.cpp
         source/GlissonSlider/Slider.cpp
@@ -34,7 +35,15 @@ juce_add_binary_data(UIResource
         SOURCES
         resource/RobotoCondensed.ttf
         resource/Logo.png
-        resource/head_lowpoly.obj)
+        resource/head_lowpoly.obj
+        resource/icons/play.svg
+        resource/icons/pause.svg
+        resource/icons/stop.svg
+        resource/icons/room.svg
+        resource/icons/settings.svg
+        resource/icons/trash.svg
+        resource/icons/pencil.svg
+        resource/icons/eye.svg)
 
 target_link_libraries(UICore
         PUBLIC
