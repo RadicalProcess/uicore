@@ -4,7 +4,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <functional>
 #include <vector>
 
 namespace rp::uicore
@@ -29,6 +28,11 @@ namespace rp::uicore
     // straight-line default. There is only ever a single curve. A small button
     // in the top-right corner clears it.
     //
+    // Every anchor carries a small white number label above its marker, counting
+    // 1, 2, 3... from the start of the curve to the end (see NodeLabel). The
+    // label follows the anchor as it is dragged, and removing an anchor
+    // renumbers the remaining ones from 1 so the sequence never has gaps.
+    //
     // Anchor positions and handles are stored normalised to the reference square
     // (0..1 on each axis, y increasing downwards) rather than the whole
     // component, so the curve keeps its proportions inside the circle when the
@@ -36,8 +40,27 @@ namespace rp::uicore
     class TrajectoryView : public juce::Component
     {
     public:
+        // Receives notifications whenever the curve changes, following the
+        // JUCE listener convention. Register with addListener and deregister
+        // with removeListener. A companion view (such as ElevationView) is kept
+        // in sync by a host that listens here and pushes the anchors on, so the
+        // two views never reference each other.
+        class Listener
+        {
+        public:
+            virtual ~Listener() = default;
+
+            // Called whenever the curve changes, either through user
+            // interaction or clear(). Read the new state back through the
+            // given view, e.g. getAnchors().
+            virtual void trajectoryChanged(TrajectoryView* view) = 0;
+        };
+
         TrajectoryView();
         ~TrajectoryView() override = default;
+
+        void addListener(Listener* listener);
+        void removeListener(Listener* listener);
 
         // The anchor positions of the curve, in the order they were added,
         // normalised to 0..1.
@@ -68,10 +91,6 @@ namespace rp::uicore
         // The normalised position of the playhead along the curve, 0 at the start
         // point and 1 at the end point. Values are clamped to 0..1.
         void setPlayheadPosition(float position);
-
-        // Invoked whenever the curve changes, either through user interaction or
-        // clear().
-        std::function<void()> onChange;
 
     private:
         void paint(juce::Graphics& g) override;
@@ -130,7 +149,10 @@ namespace rp::uicore
         // Drag::None when it is on neither (or nothing is selected).
         Drag handleAt(juce::Point<float> point) const;
 
-        void notifyChange() const;
+        void notifyChange();
+
+        // The registered listeners, notified whenever the curve changes.
+        juce::ListenerList<Listener> listeners_;
 
         std::vector<Anchor> anchors_;
 

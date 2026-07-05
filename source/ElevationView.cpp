@@ -1,4 +1,5 @@
 #include "UICore/ElevationView.h"
+#include "UICore/NodeLabel.h"
 #include "UICore/Style.h"
 
 #include <algorithm>
@@ -81,7 +82,9 @@ namespace rp::uicore
         }
 
         // The node markers: the node being dragged is a filled highlight disc,
-        // the others hollow foreground rings.
+        // the others hollow foreground rings. Each marker carries its one-based
+        // number above it, matching the numbering of the trajectory anchors the
+        // nodes were built from.
         for (auto i = 0; i < static_cast<int>(nodes_.size()); ++i)
         {
             const auto centre = nodePixel(i);
@@ -99,6 +102,8 @@ namespace rp::uicore
                 g.setColour(styles::foreground);
                 g.drawEllipse(bounds, frameWidth_);
             }
+
+            drawNodeLabel(g, centre, nodeRadius_, i + 1);
         }
     }
 

@@ -24,6 +24,11 @@ namespace rp::uicore
     // elevation zero. Node values are normalised to the drawing area (0 at the
     // top, 1 at the bottom), so 0.5 is elevation zero and values above 0.5 sit
     // below the line, letting the user specify negative elevation.
+    //
+    // Every node carries a small white number label above its marker, counting
+    // 1, 2, 3... in node order (see NodeLabel). Since the host feeds the nodes
+    // in trajectory-anchor order, each number matches the label of the
+    // corresponding anchor in TrajectoryView.
     class ElevationView : public juce::Component
     {
     public:
