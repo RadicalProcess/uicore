@@ -1,64 +1,49 @@
 #pragma once
 
-#include <map>
-
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+
+#include <UICore/Keyboard.h>
 
 namespace rp::uicore
 {
 
-    // An 88-key (A0..C8) piano keyboard built on juce::MidiKeyboardComponent.
+    // A scrollable piano keyboard: it wraps a Keyboard that spans the whole MIDI
+    // range (0..127) but only shows a four-octave window (A3..A7) at a time, with
+    // a horizontal scroll bar under the keys to pan left and right.
     //
-    // On top of the standard component it adds three things:
-    //   * per-key fill colours (setColor / clearColor / clearColors),
-    //   * an octave label under every A key (A0, A1, A2, ...),
-    //   * a single "selected" key that is drawn with an outline (setSelection).
+    // This is the component to reach for by default; use the wrapped Keyboard
+    // directly (via keyboard()) to colour keys or set the selection.
     //
-    // The keyboard shares a juce::MidiKeyboardState with the host, following the
-    // usual JUCE idiom; the state must outlive the view.
-    class KeyboardView : public juce::MidiKeyboardComponent
+    // The keyboard shares a juce::MidiKeyboardState with the host; the state must
+    // outlive the view.
+    class KeyboardView : public juce::Component,
+                         private juce::ScrollBar::Listener,
+                         private juce::ChangeListener
     {
     public:
-        explicit KeyboardView(juce::MidiKeyboardState& state,
-                              Orientation orientation = Orientation::horizontalKeyboard);
+        explicit KeyboardView(juce::MidiKeyboardState& state);
+        ~KeyboardView() override;
 
-        // Sets a custom fill colour for a single key. The colour is used as the
-        // key's base colour; the usual mouse-over / key-down overlays are still
-        // drawn on top of it.
-        void setColor(int midiNoteNumber, juce::Colour colour);
+        // The wrapped keys, for colouring / selection and any other Keyboard API.
+        Keyboard& keyboard() noexcept;
+        const Keyboard& keyboard() const noexcept;
 
-        // Removes the custom colour of a single key, reverting it to the default.
-        void clearColor(int midiNoteNumber);
-
-        // Removes every custom key colour.
-        void clearColors();
-
-        // Outlines the given key to mark it as the current selection. Only one key
-        // can be selected at a time; pass -1 (or any note outside the range) to
-        // clear the selection.
-        void setSelection(int midiNoteNumber);
-
-        // The currently selected key, or -1 when nothing is selected.
-        int getSelection() const noexcept;
-
-    protected:
         void resized() override;
-        void drawWhiteNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
-                           bool isDown, bool isOver, juce::Colour lineColour, juce::Colour textColour) override;
-        void drawBlackNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
-                           bool isDown, bool isOver, juce::Colour noteFillColour) override;
-        juce::String getWhiteNoteText(int midiNoteNumber) override;
 
     private:
-        // Draws the selection outline inside a key's area.
-        void drawSelectionOutline(juce::Graphics& g, const juce::Rectangle<float>& area) const;
+        // Keeps the scroll bar's thumb in step with the keys' scroll position
+        // (e.g. after a mouse-wheel scroll).
+        void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
-        // Returns the custom colour for a key, or an empty optional when none is set.
-        const juce::Colour* findColor(int midiNoteNumber) const;
+        // Pans the keys when the user drags the scroll bar.
+        void scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart) override;
 
-        std::map<int, juce::Colour> keyColours_;
-        int selectedNote_ = -1;
+        Keyboard keys_;
+        juce::ScrollBar scrollBar_{false};
+
+        // Guards against the keys <-> scroll bar updates feeding back on each other.
+        bool ignoreScrollCallbacks_ = false;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KeyboardView)
     };

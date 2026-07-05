@@ -1,134 +1,84 @@
 #include <UICore/KeyboardView.h>
 
+#include <UICore/Style.h>
+
 namespace rp::uicore
 {
 
     namespace
     {
-        // 88-key piano range: A0 (MIDI 21) to C8 (MIDI 108).
-        constexpr int kFirstKey = 21;
-        constexpr int kLastKey = 108;
+        // Visible window: four octaves from A3 (MIDI 57) to A7 (MIDI 105).
+        constexpr int kLowestVisibleNote = 57;
+        constexpr int kHighestVisibleNote = 105;
 
-        // Middle C = C4 so that A0 (MIDI 21) is labelled "A0".
-        constexpr int kOctaveForMiddleC = 4;
+        // White keys spanning A3..A7 inclusive; drives the key width so exactly the
+        // four-octave window fits the keyboard's width.
+        constexpr int kVisibleWhiteKeys = 29;
 
-        // Semitone offset of the A notes within an octave (C == 0).
-        constexpr int kNoteA = 9;
+        // The keyboard can be scrolled across the whole MIDI range.
+        constexpr int kFirstMidiNote = 0;
+        constexpr int kLastMidiNote = 127;
 
-        const juce::Colour kSelectionColour = juce::Colours::red;
+        constexpr int kScrollBarHeight = 16;
     }
 
-    KeyboardView::KeyboardView(juce::MidiKeyboardState& state, Orientation orientation)
-    : juce::MidiKeyboardComponent(state, orientation)
+    KeyboardView::KeyboardView(juce::MidiKeyboardState& state)
+    : keys_(state)
     {
-        setAvailableRange(kFirstKey, kLastKey);
-        setOctaveForMiddleC(kOctaveForMiddleC);
-        // Scrolling stays enabled (so setLowestVisibleKey is honoured and callers
-        // can drive it from an external scroll bar), but the built-in octave
-        // scroll buttons are hidden in resized(). Calling setScrollButtonsVisible
-        // (false) here would instead disable scrolling entirely: the base class
-        // snaps the view back to the first key on every layout when it cannot
-        // scroll.
+        keys_.setAvailableRange(kFirstMidiNote, kLastMidiNote);
+        keys_.setLowestVisibleKey(kLowestVisibleNote);
+        keys_.addChangeListener(this);
+        addAndMakeVisible(keys_);
+
+        const auto visibleSpan = kHighestVisibleNote - kLowestVisibleNote + 1;
+        scrollBar_.setRangeLimits(kFirstMidiNote, kLastMidiNote + 1);
+        scrollBar_.setCurrentRange(kLowestVisibleNote, visibleSpan, juce::dontSendNotification);
+        scrollBar_.setAutoHide(false);
+        scrollBar_.setColour(juce::ScrollBar::thumbColourId, styles::highlight);
+        scrollBar_.addListener(this);
+        addAndMakeVisible(scrollBar_);
+    }
+
+    KeyboardView::~KeyboardView()
+    {
+        keys_.removeChangeListener(this);
+    }
+
+    Keyboard& KeyboardView::keyboard() noexcept
+    {
+        return keys_;
+    }
+
+    const Keyboard& KeyboardView::keyboard() const noexcept
+    {
+        return keys_;
     }
 
     void KeyboardView::resized()
     {
-        juce::MidiKeyboardComponent::resized();
+        auto area = getLocalBounds();
+        scrollBar_.setBounds(area.removeFromBottom(kScrollBarHeight));
 
-        // The base class lays out (and shows) its two octave scroll buttons here;
-        // they are this component's only child components. Hide them so the keys
-        // span the full width and scrolling is left to an external control.
-        for (auto* child : getChildren())
-        {
-            if (auto* button = dynamic_cast<juce::Button*>(child))
-                button->setVisible(false);
-        }
+        keys_.setBounds(area);
+        keys_.setKeyWidth(static_cast<float>(area.getWidth()) / static_cast<float>(kVisibleWhiteKeys));
     }
 
-    void KeyboardView::setColor(int midiNoteNumber, juce::Colour colour)
+    void KeyboardView::changeListenerCallback(juce::ChangeBroadcaster* source)
     {
-        keyColours_[midiNoteNumber] = colour;
-        repaint();
-    }
-
-    void KeyboardView::clearColor(int midiNoteNumber)
-    {
-        keyColours_.erase(midiNoteNumber);
-        repaint();
-    }
-
-    void KeyboardView::clearColors()
-    {
-        keyColours_.clear();
-        repaint();
-    }
-
-    void KeyboardView::setSelection(int midiNoteNumber)
-    {
-        if (selectedNote_ == midiNoteNumber)
+        if (source != &keys_ || ignoreScrollCallbacks_)
             return;
 
-        selectedNote_ = midiNoteNumber;
-        repaint();
+        const juce::ScopedValueSetter<bool> guard(ignoreScrollCallbacks_, true);
+        scrollBar_.setCurrentRangeStart(keys_.getLowestVisibleKey(), juce::dontSendNotification);
     }
 
-    int KeyboardView::getSelection() const noexcept
+    void KeyboardView::scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart)
     {
-        return selectedNote_;
-    }
+        if (scrollBarThatHasMoved != &scrollBar_ || ignoreScrollCallbacks_)
+            return;
 
-    void KeyboardView::drawWhiteNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
-                                     bool isDown, bool isOver, juce::Colour lineColour, juce::Colour textColour)
-    {
-        // The base implementation only overlays the down / over states on top of
-        // the component background, so filling the custom colour first lets it
-        // show through as the key's base colour.
-        if (const auto* colour = findColor(midiNoteNumber))
-        {
-            g.setColour(*colour);
-            g.fillRect(area);
-        }
-
-        juce::MidiKeyboardComponent::drawWhiteNote(midiNoteNumber, g, area, isDown, isOver, lineColour, textColour);
-
-        if (midiNoteNumber == selectedNote_)
-            drawSelectionOutline(g, area);
-    }
-
-    void KeyboardView::drawBlackNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
-                                     bool isDown, bool isOver, juce::Colour noteFillColour)
-    {
-        const auto* colour = findColor(midiNoteNumber);
-        const auto fillColour = colour != nullptr ? *colour : noteFillColour;
-
-        juce::MidiKeyboardComponent::drawBlackNote(midiNoteNumber, g, area, isDown, isOver, fillColour);
-
-        if (midiNoteNumber == selectedNote_)
-            drawSelectionOutline(g, area);
-    }
-
-    juce::String KeyboardView::getWhiteNoteText(int midiNoteNumber)
-    {
-        if (midiNoteNumber % 12 == kNoteA)
-            return juce::MidiMessage::getMidiNoteName(midiNoteNumber, true, true, getOctaveForMiddleC());
-
-        return {};
-    }
-
-    void KeyboardView::drawSelectionOutline(juce::Graphics& g, const juce::Rectangle<float>& area) const
-    {
-        const auto outline = area.reduced(1.0f);
-        g.setColour(kSelectionColour);
-        g.drawRect(outline, 2.0f);
-    }
-
-    const juce::Colour* KeyboardView::findColor(int midiNoteNumber) const
-    {
-        const auto it = keyColours_.find(midiNoteNumber);
-        if (it == keyColours_.end())
-            return nullptr;
-
-        return &it->second;
+        const juce::ScopedValueSetter<bool> guard(ignoreScrollCallbacks_, true);
+        keys_.setLowestVisibleKey(juce::roundToInt(newRangeStart));
     }
 
 }
