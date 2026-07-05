@@ -23,7 +23,26 @@ namespace rp::uicore
     {
         setAvailableRange(kFirstKey, kLastKey);
         setOctaveForMiddleC(kOctaveForMiddleC);
-        setScrollButtonsVisible(false);
+        // Scrolling stays enabled (so setLowestVisibleKey is honoured and callers
+        // can drive it from an external scroll bar), but the built-in octave
+        // scroll buttons are hidden in resized(). Calling setScrollButtonsVisible
+        // (false) here would instead disable scrolling entirely: the base class
+        // snaps the view back to the first key on every layout when it cannot
+        // scroll.
+    }
+
+    void KeyboardView::resized()
+    {
+        juce::MidiKeyboardComponent::resized();
+
+        // The base class lays out (and shows) its two octave scroll buttons here;
+        // they are this component's only child components. Hide them so the keys
+        // span the full width and scrolling is left to an external control.
+        for (auto* child : getChildren())
+        {
+            if (auto* button = dynamic_cast<juce::Button*>(child))
+                button->setVisible(false);
+        }
     }
 
     void KeyboardView::setColor(int midiNoteNumber, juce::Colour colour)
