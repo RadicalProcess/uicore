@@ -7,6 +7,7 @@ add_library(UICore
         source/Waveform.cpp
         source/WaveformRenderer.cpp
         source/MotionView.cpp
+        source/TransportView.cpp
         source/GestureView.cpp
         source/TrajectoryView.cpp
         source/ElevationView.cpp
