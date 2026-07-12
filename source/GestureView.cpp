@@ -38,12 +38,32 @@ namespace rp::uicore
 
         // Grey out notes taken by other gestures each time the dropdown opens.
         keyBox_.onBeforePopup = [this] { refreshKeyAvailability(); };
+
+        // Report a user pick to the host as a MIDI note. setKey never triggers
+        // this: it selects with dontSendNotification.
+        keyBox_.onChange = [this]
+        {
+            const auto id = keyBox_.getSelectedId();
+            if (id == 0)
+                return;
+
+            if (onKeyChanged)
+                onKeyChanged(id - 1 + firstKey);
+        };
         addAndMakeVisible(keyBox_);
 
         // The gesture name is the only editable field.
         nameLabel_.setBounds(90, 7, 200, 26);
         nameLabel_.setEditable(true);
         nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
+
+        // Report a finished name edit to the host. setName never triggers this:
+        // it sets the text with dontSendNotification.
+        nameLabel_.onTextChange = [this]
+        {
+            if (onNameChanged)
+                onNameChanged(nameLabel_.getText());
+        };
         addAndMakeVisible(nameLabel_);
         soundfileLabel_.setBounds(5, 50, 140, 20);
         addAndMakeVisible(soundfileLabel_);

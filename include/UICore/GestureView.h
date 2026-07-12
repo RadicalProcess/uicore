@@ -51,6 +51,14 @@ namespace rp::uicore
         // can select it.
         std::function<void()> onClicked;
 
+        // Called when the user finishes editing the gesture name, with the new
+        // text.
+        std::function<void(const juce::String &name)> onNameChanged;
+
+        // Called when the user picks a different key in the dropdown, with the new
+        // MIDI note.
+        std::function<void(int midiNote)> onKeyChanged;
+
         // Queried just before the key drop-down opens; returns the MIDI notes that
         // are already taken by other gestures and should be greyed out.
         std::function<std::vector<int>()> unavailableKeysProvider;
