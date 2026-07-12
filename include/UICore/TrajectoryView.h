@@ -62,6 +62,35 @@ namespace rp::uicore
             // default, so listeners that only track the curve need not
             // override it.
             virtual void anchorSelectionChanged(TrajectoryView* view, int selectedIndex);
+
+            // Called once a user edit of the curve is complete: on mouse
+            // release after the curve changed during that press-drag cycle,
+            // and after the curve is cleared. Not called during dragging (see
+            // trajectoryChanged for per-change notifications) or for clicks
+            // that only change the selection. Meant for hosts that persist
+            // the curve, so they can commit it once per completed edit. Does
+            // nothing by default.
+            virtual void trajectoryEditEnded(TrajectoryView* view);
+        };
+
+        // One point on the curve: its position plus the two control points that
+        // shape the segments on either side of it. handleIn steers the segment
+        // arriving from the previous anchor and handleOut the one going to the
+        // next; the two move independently. All values are normalised to 0..1.
+        //
+        // handleInCustomised / handleOutCustomised record whether the user has
+        // dragged that handle away from its straight-line default. An untouched
+        // handle is kept on the line between its anchors, so a segment stays
+        // straight until a bordering handle is actually grabbed. Dragging the
+        // anchor re-straightens its untouched handles rather than dragging them
+        // out of place, and resetting a handle (shift-click) clears the flag.
+        struct Anchor
+        {
+            juce::Point<float> position;
+            juce::Point<float> handleIn;
+            juce::Point<float> handleOut;
+            bool handleInCustomised = false;
+            bool handleOutCustomised = false;
         };
 
         TrajectoryView();
@@ -73,6 +102,17 @@ namespace rp::uicore
         // The anchor positions of the curve, in the order they were added,
         // normalised to 0..1.
         std::vector<juce::Point<float>> getAnchors() const;
+
+        // The full curve data (positions, handles and customised flags) in the
+        // order the anchors were added, normalised to 0..1.
+        const std::vector<Anchor>& getAnchorData() const;
+
+        // Replaces the whole curve with the given anchors, clearing the
+        // selection. This is an API update rather than a user edit, so it fires
+        // neither trajectoryChanged nor trajectoryEditEnded (matching
+        // ElevationView::setNodes); anchorSelectionChanged still fires when a
+        // selection existed before.
+        void setAnchorData(const std::vector<Anchor>& anchors);
 
         // The diameter (in pixels) of the inscribed reference circle, i.e. the
         // side of the centred reference square. Tracks the component bounds, so
@@ -114,26 +154,6 @@ namespace rp::uicore
         void mouseDown(const juce::MouseEvent& event) override;
         void mouseDrag(const juce::MouseEvent& event) override;
         void mouseUp(const juce::MouseEvent& event) override;
-
-        // One point on the curve: its position plus the two control points that
-        // shape the segments on either side of it. handleIn steers the segment
-        // arriving from the previous anchor and handleOut the one going to the
-        // next; the two move independently. All values are normalised to 0..1.
-        //
-        // handleInCustomised / handleOutCustomised record whether the user has
-        // dragged that handle away from its straight-line default. An untouched
-        // handle is kept on the line between its anchors, so a segment stays
-        // straight until a bordering handle is actually grabbed. Dragging the
-        // anchor re-straightens its untouched handles rather than dragging them
-        // out of place, and resetting a handle (shift-click) clears the flag.
-        struct Anchor
-        {
-            juce::Point<float> position;
-            juce::Point<float> handleIn;
-            juce::Point<float> handleOut;
-            bool handleInCustomised = false;
-            bool handleOutCustomised = false;
-        };
 
         // What the in-progress drag is manipulating.
         enum class Drag
@@ -186,6 +206,10 @@ namespace rp::uicore
         // changed.
         void notifySelectionChanged();
 
+        // Tells every registered listener that a user edit of the curve is
+        // complete (see Listener::trajectoryEditEnded).
+        void notifyEditEnded();
+
         // The registered listeners, notified whenever the curve or the anchor
         // selection changes.
         juce::ListenerList<Listener> listeners_;
@@ -201,6 +225,10 @@ namespace rp::uicore
 
         // What the current drag is manipulating, or Drag::None when idle.
         Drag dragMode_;
+
+        // Whether the curve changed since the last mouse press, so the mouse
+        // release knows whether to announce a completed edit.
+        bool curveEdited_;
 
         // Clears the whole curve.
         juce::TextButton clearButton_;

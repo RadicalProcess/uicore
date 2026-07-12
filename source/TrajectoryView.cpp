@@ -67,6 +67,7 @@ namespace rp::uicore
     : selectedIndex_(-1)
     , highlightedIndex_(-1)
     , dragMode_(Drag::None)
+    , curveEdited_(false)
     , clearButton_("clear")
     , waveformButton_("waveform")
     , playheadEnabled_(false)
@@ -90,6 +91,12 @@ namespace rp::uicore
         // not care about the selection.
     }
 
+    void TrajectoryView::Listener::trajectoryEditEnded(TrajectoryView* /*view*/)
+    {
+        // Does nothing by default: only listeners that commit completed edits
+        // (e.g. to persist the curve) need to care.
+    }
+
     void TrajectoryView::addListener(Listener* listener)
     {
         listeners_.add(listener);
@@ -108,6 +115,29 @@ namespace rp::uicore
             positions.push_back(anchor.position);
 
         return positions;
+    }
+
+    const std::vector<TrajectoryView::Anchor>& TrajectoryView::getAnchorData() const
+    {
+        return anchors_;
+    }
+
+    void TrajectoryView::setAnchorData(const std::vector<Anchor>& anchors)
+    {
+        const auto hadSelection = selectedIndex_ >= 0;
+
+        anchors_ = anchors;
+        selectedIndex_ = -1;
+        dragMode_ = Drag::None;
+        curveEdited_ = false;
+
+        // An API update rather than a user edit: neither trajectoryChanged nor
+        // trajectoryEditEnded fires (matching ElevationView::setNodes), so a
+        // host restoring a stored curve does not immediately hear it back.
+        if (hadSelection)
+            notifySelectionChanged();
+
+        repaint();
     }
 
     float TrajectoryView::getCircleDiameter() const
@@ -129,6 +159,11 @@ namespace rp::uicore
         notifyChange();
         if (hadSelection)
             notifySelectionChanged();
+
+        // The clear button completes the edit immediately: no mouse release on
+        // the canvas follows, so the emptied curve is committed here.
+        curveEdited_ = false;
+        notifyEditEnded();
 
         repaint();
     }
@@ -457,6 +492,15 @@ namespace rp::uicore
     void TrajectoryView::mouseUp(const juce::MouseEvent&)
     {
         dragMode_ = Drag::None;
+
+        // One completed edit per press-drag-release cycle: the release commits
+        // whatever the press and drags changed. A plain selection click never
+        // marks the curve as edited, so it commits nothing.
+        if (!curveEdited_)
+            return;
+
+        curveEdited_ = false;
+        notifyEditEnded();
     }
 
     juce::Rectangle<float> TrajectoryView::squareArea() const
@@ -588,12 +632,20 @@ namespace rp::uicore
 
     void TrajectoryView::notifyChange()
     {
+        // Every path that changes the curve funnels through here, so the mouse
+        // release can tell an edit happened during the current press cycle.
+        curveEdited_ = true;
         listeners_.call([this](Listener& listener) { listener.trajectoryChanged(this); });
     }
 
     void TrajectoryView::notifySelectionChanged()
     {
         listeners_.call([this](Listener& listener) { listener.anchorSelectionChanged(this, selectedIndex_); });
+    }
+
+    void TrajectoryView::notifyEditEnded()
+    {
+        listeners_.call([this](Listener& listener) { listener.trajectoryEditEnded(this); });
     }
 
 }
