@@ -122,4 +122,12 @@ namespace rp::uicore
     {
         setLookAndFeel(nullptr);
     }
+
+    void ComboBox::mouseDown(const juce::MouseEvent& event)
+    {
+        if (onBeforePopup)
+            onBeforePopup();
+
+        juce::ComboBox::mouseDown(event);
+    }
 }

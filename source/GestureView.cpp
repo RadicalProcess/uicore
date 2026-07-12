@@ -35,6 +35,9 @@ namespace rp::uicore
 
         keyBox_.setSelectedId(1, juce::dontSendNotification);
         keyBox_.setBounds(5, 5, 70, 30);
+
+        // Grey out notes taken by other gestures each time the dropdown opens.
+        keyBox_.onBeforePopup = [this] { refreshKeyAvailability(); };
         addAndMakeVisible(keyBox_);
 
         // The gesture name is the only editable field.
@@ -57,6 +60,13 @@ namespace rp::uicore
         g.fillAll(juce::Colours::black);
         g.setColour(juce::Colour(juce::Colours::white));
         g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.0f, 1.0f);
+
+        if (selected_)
+        {
+            g.setColour(juce::Colours::cornflowerblue);
+            g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1.5f), 5.0f, 2.0f);
+        }
+
         if (!fileDragActive_)
             return;
 
@@ -73,6 +83,44 @@ namespace rp::uicore
         g.setColour(juce::Colours::white);
         g.drawText("Drop a mono .wav / .aiff soundfile here",
                    bounds.reduced(6), juce::Justification::centredBottom, false);
+    }
+
+    void GestureView::mouseDown(const juce::MouseEvent &)
+    {
+        if (onClicked)
+            onClicked();
+    }
+
+    void GestureView::setName(const juce::String &name)
+    {
+        nameLabel_.setText(name, juce::dontSendNotification);
+    }
+
+    void GestureView::setKey(int midiNote)
+    {
+        // The dropdown item id is the MIDI note offset by one (see the constructor).
+        keyBox_.setSelectedId(midiNote - firstKey + 1, juce::dontSendNotification);
+    }
+
+    void GestureView::setSelected(bool selected)
+    {
+        if (selected_ == selected)
+            return;
+
+        selected_ = selected;
+        repaint();
+    }
+
+    void GestureView::refreshKeyAvailability()
+    {
+        for (auto note = firstKey; note <= lastKey; ++note)
+            keyBox_.setItemEnabled(note - firstKey + 1, true);
+
+        if (!unavailableKeysProvider)
+            return;
+
+        for (const auto note : unavailableKeysProvider())
+            keyBox_.setItemEnabled(note - firstKey + 1, false);
     }
 
     bool GestureView::isAcceptedSoundfile(const juce::String &path)
