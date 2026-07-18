@@ -99,6 +99,7 @@ namespace rp::uicore
         // Miniature preview of the gesture's trajectory curve.
         TrajectoryThumbnail thumbnail_;
 
+        void resized() override;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GestureView)
     };
 

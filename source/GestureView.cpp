@@ -34,7 +34,6 @@ namespace rp::uicore
             keyBox_.addItem(keyName(note), note - firstKey + 1);
 
         keyBox_.setSelectedId(1, juce::dontSendNotification);
-        keyBox_.setBounds(5, 5, 70, 30);
 
         // Grey out notes taken by other gestures each time the dropdown opens.
         keyBox_.onBeforePopup = [this] { refreshKeyAvailability(); };
@@ -53,9 +52,9 @@ namespace rp::uicore
         addAndMakeVisible(keyBox_);
 
         // The gesture name is the only editable field.
-        nameLabel_.setBounds(90, 7, 200, 26);
         nameLabel_.setEditable(true);
         nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
+        nameLabel_.setJustificationType(juce::Justification::left);
 
         // Report a finished name edit to the host. setName never triggers this:
         // it sets the text with dontSendNotification.
@@ -65,13 +64,12 @@ namespace rp::uicore
                 onNameChanged(nameLabel_.getText());
         };
         addAndMakeVisible(nameLabel_);
-        soundfileLabel_.setBounds(5, 50, 140, 20);
+        soundfileLabel_.setJustificationType(juce::Justification::left);
         addAndMakeVisible(soundfileLabel_);
 
-        usageLabel_.setBounds(160, 50, 14, 20);
+        usageLabel_.setJustificationType(juce::Justification::left);
         addAndMakeVisible(usageLabel_);
 
-        thumbnail_.setBounds(290, 7, 60, 60);
         addAndMakeVisible(thumbnail_);
     }
 
@@ -163,6 +161,8 @@ namespace rp::uicore
         return reader != nullptr && reader->numChannels == 1;
     }
 
+
+
     bool GestureView::isInterestedInFileDrag(const juce::StringArray &files)
     {
         // Only a single accepted soundfile may be dropped; returning false for
@@ -201,4 +201,11 @@ namespace rp::uicore
             onSoundfileDropped(file);
     }
 
+    void GestureView::resized() {
+        keyBox_.setBounds(5, 5, 70, 30);
+        nameLabel_.setBounds(90, 7, 100, 26);
+        soundfileLabel_.setBounds(5, 50, 140, 20);
+        usageLabel_.setBounds(160, 50, 14, 20);
+        thumbnail_.setBounds(220, 10, 60, 60);
+    }
 }
