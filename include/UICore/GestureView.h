@@ -39,6 +39,7 @@ namespace rp::uicore
         // Populate the row from a gesture's data.
         void setName(const juce::String &name);
         void setKey(int midiNote);
+        void setTrajectory(const std::vector<TrajectoryView::Anchor> &anchors);
 
         // Draw the row as selected / unselected.
         void setSelected(bool selected);
@@ -95,7 +96,7 @@ namespace rp::uicore
         // How many times the gesture is used; not editable.
         Label usageLabel_;
 
-        // Gray preview placeholder.
+        // Miniature preview of the gesture's trajectory curve.
         TrajectoryThumbnail thumbnail_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GestureView)

@@ -213,7 +213,7 @@ namespace rp::uicore
         const auto hasCurve = anchors_.size() >= 2;
         if (hasCurve)
         {
-            buildPath(path);
+            buildPath(anchors_, square, path);
 
             if (waveformButton_.getToggleState())
             {
@@ -584,14 +584,22 @@ namespace rp::uicore
         }
     }
 
-    void TrajectoryView::buildPath(juce::Path& path) const
+    void TrajectoryView::buildPath(const std::vector<Anchor>& anchors,
+                                   const juce::Rectangle<float>& square,
+                                   juce::Path& path)
     {
-        path.startNewSubPath(toPixel(anchors_.front().position));
-
-        for (auto i = static_cast<size_t>(1); i < anchors_.size(); ++i)
+        const auto toPixel = [&square](juce::Point<float> normalised)
         {
-            const auto& previous = anchors_[i - 1];
-            const auto& current = anchors_[i];
+            return juce::Point<float>(square.getX() + normalised.x * square.getWidth(),
+                                      square.getY() + normalised.y * square.getHeight());
+        };
+
+        path.startNewSubPath(toPixel(anchors.front().position));
+
+        for (auto i = static_cast<size_t>(1); i < anchors.size(); ++i)
+        {
+            const auto& previous = anchors[i - 1];
+            const auto& current = anchors[i];
             path.cubicTo(toPixel(previous.handleOut), toPixel(current.handleIn), toPixel(current.position));
         }
     }

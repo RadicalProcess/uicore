@@ -147,6 +147,14 @@ namespace rp::uicore
         // point and 1 at the end point. Values are clamped to 0..1.
         void setPlayheadPosition(float position);
 
+        // Builds the cubic bezier path through the given anchors, mapping their
+        // normalised coordinates into the given square (in pixels). Static so a
+        // companion view such as TrajectoryThumbnail can render the exact same
+        // curve at its own scale.
+        static void buildPath(const std::vector<Anchor>& anchors,
+                              const juce::Rectangle<float>& square,
+                              juce::Path& path);
+
     private:
         void paint(juce::Graphics& g) override;
         void resized() override;
@@ -189,9 +197,6 @@ namespace rp::uicore
         // moved so its adjoining segments stay straight unless a handle bordering
         // them was explicitly dragged.
         void straightenUntouchedHandles(int index);
-
-        // Builds the cubic bezier path through the anchors (in pixels).
-        void buildPath(juce::Path& path) const;
 
         // Index of the anchor whose marker contains the given local point, or -1.
         int anchorAt(juce::Point<float> point) const;

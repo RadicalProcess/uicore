@@ -122,6 +122,11 @@ namespace rp::uicore
         keyBox_.setSelectedId(midiNote - firstKey + 1, juce::dontSendNotification);
     }
 
+    void GestureView::setTrajectory(const std::vector<TrajectoryView::Anchor> &anchors)
+    {
+        thumbnail_.setAnchorData(anchors);
+    }
+
     void GestureView::setSelected(bool selected)
     {
         if (selected_ == selected)
