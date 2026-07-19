@@ -63,6 +63,11 @@ namespace rp::uicore
 
         float getFadeOut() const;
 
+        // Programmatically set the fades. Both are ratios (0..1) of the selection
+        // width; they are clamped and the fade-out is capped so the two never
+        // overlap. Has no effect while fades are disabled (see setFadeEnabled).
+        void setFade(float fadeInRatio, float fadeOutRatio);
+
         // Invoked whenever the selection changes, either through user
         // interaction or setSelection / clearSelection.
         std::function<void(float startRatio, float endRatio)> onSelectionChanged;

@@ -178,6 +178,22 @@ namespace rp::uicore
         return fadeOutRatio_;
     }
 
+    void Waveform::setFade(float fadeInRatio, float fadeOutRatio)
+    {
+        // Gated like the selection: with fades disabled the component holds none.
+        if (!fadeEnabled_)
+            return;
+
+        // Clamp each into range, then cap the fade-out against whatever the
+        // fade-in leaves so the two never overlap (the same limit the drag
+        // handles enforce).
+        const auto clampedIn = std::clamp(fadeInRatio, 0.0f, 1.0f);
+        fadeInRatio_ = clampedIn;
+        fadeOutRatio_ = std::clamp(fadeOutRatio, 0.0f, 1.0f - clampedIn);
+
+        repaint();
+    }
+
     void Waveform::mouseDown(const juce::MouseEvent& event)
     {
         // A fade handle takes priority over starting a new selection so the user
