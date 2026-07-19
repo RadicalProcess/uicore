@@ -21,6 +21,12 @@ namespace rp::uicore
     // rejects (wrong extension, multichannel, or several files) is ignored. On a
     // successful drop the soundfile label shows the file name and onSoundfile
     // Dropped is called with the full file so the host can react (e.g. notify).
+    //
+    // While no soundfile is associated (setSoundfile with an empty name) the
+    // soundfile area shows a button that opens the OS-native file browser plus a
+    // hint that a file can also be dragged onto the row; a file picked in the
+    // browser goes through the same validation and onSoundfileDropped path as a
+    // dropped one.
     class GestureView
         : public juce::Component
         , public juce::FileDragAndDropTarget
@@ -40,6 +46,10 @@ namespace rp::uicore
         void setName(const juce::String &name);
         void setKey(int midiNote);
         void setTrajectory(const std::vector<TrajectoryView::Anchor> &anchors);
+
+        // Show the associated soundfile's name, or pass an empty name to show
+        // the select-soundfile button and drag-and-drop hint instead.
+        void setSoundfile(const juce::String &name);
 
         // Draw the row as selected / unselected.
         void setSelected(bool selected);
@@ -69,6 +79,14 @@ namespace rp::uicore
         // Re-enable every note, then disable the ones the provider reports as taken.
         void refreshKeyAvailability();
 
+        // Swap the soundfile area between the name label (soundfile associated)
+        // and the select button plus drag-and-drop hint (no soundfile yet).
+        void updateSoundfileArea();
+
+        // Open the OS-native file browser; a valid pick is reported through
+        // onSoundfileDropped, an invalid one shows a native alert.
+        void openFileChooser();
+
         // True only for a single mono .wav/.aiff/.aif file; used both to filter
         // drops and to decide whether the file may be read at all.
         bool isAcceptedSoundfile(const juce::String &path);
@@ -90,8 +108,21 @@ namespace rp::uicore
         // Editable name of the gesture.
         Label nameLabel_;
 
-        // Soundfile the gesture plays; not editable, set by dropping a file.
+        // Soundfile the gesture plays; not editable, set by dropping a file or
+        // picking one in the file browser. Hidden while no soundfile is
+        // associated.
         Label soundfileLabel_;
+
+        // Opens the OS-native file browser; shown only while no soundfile is
+        // associated.
+        juce::TextButton selectButton_;
+
+        // Tells the user a soundfile can also be dragged onto the row; shown
+        // only while no soundfile is associated.
+        Label dropHintLabel_;
+
+        // Kept alive for the duration of the asynchronous native file dialog.
+        std::unique_ptr<juce::FileChooser> fileChooser_;
 
         // How many times the gesture is used; not editable.
         Label usageLabel_;

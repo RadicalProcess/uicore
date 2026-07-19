@@ -22,7 +22,9 @@ namespace rp::uicore
     GestureView::GestureView()
     : keyBox_("keyBox")
     , nameLabel_("nameLabel", "gesture 1")
-    , soundfileLabel_("soundfileLabel", "sound.wav")
+    , soundfileLabel_("soundfileLabel", "")
+    , selectButton_("Select soundfile...")
+    , dropHintLabel_("dropHintLabel", "or drag & drop")
     , usageLabel_("usageLabel", "used 0 times")
     {
         // Needed to read soundfile headers when validating a dropped file.
@@ -67,10 +69,19 @@ namespace rp::uicore
         soundfileLabel_.setJustificationType(juce::Justification::left);
         addAndMakeVisible(soundfileLabel_);
 
+        selectButton_.onClick = [this] { openFileChooser(); };
+        addAndMakeVisible(selectButton_);
+
+        dropHintLabel_.setJustificationType(juce::Justification::left);
+        addAndMakeVisible(dropHintLabel_);
+
         usageLabel_.setJustificationType(juce::Justification::left);
         addAndMakeVisible(usageLabel_);
 
         addAndMakeVisible(thumbnail_);
+
+        // Rows start without a soundfile: show the select button and drop hint.
+        updateSoundfileArea();
     }
 
     void GestureView::paint(juce::Graphics &g)
@@ -123,6 +134,57 @@ namespace rp::uicore
     void GestureView::setTrajectory(const std::vector<TrajectoryView::Anchor> &anchors)
     {
         thumbnail_.setAnchorData(anchors);
+    }
+
+    void GestureView::setSoundfile(const juce::String &name)
+    {
+        soundfileLabel_.setText(name, juce::dontSendNotification);
+        updateSoundfileArea();
+    }
+
+    void GestureView::updateSoundfileArea()
+    {
+        // "used n times" is meaningless without a soundfile, so it swaps out
+        // together with the name label.
+        const auto associated = soundfileLabel_.getText().isNotEmpty();
+
+        soundfileLabel_.setVisible(associated);
+        usageLabel_.setVisible(associated);
+        selectButton_.setVisible(!associated);
+        dropHintLabel_.setVisible(!associated);
+    }
+
+    void GestureView::openFileChooser()
+    {
+        fileChooser_ = std::make_unique<juce::FileChooser>(
+            "Select a soundfile", juce::File(), "*.wav;*.aiff;*.aif");
+
+        const auto flags = juce::FileBrowserComponent::openMode
+                         | juce::FileBrowserComponent::canSelectFiles;
+
+        fileChooser_->launchAsync(flags, [this](const juce::FileChooser &chooser)
+        {
+            const auto file = chooser.getResult();
+
+            // An invalid file object means the dialog was cancelled.
+            if (file == juce::File())
+                return;
+
+            // The native browser can only filter by extension, so a picked file
+            // can still be rejected (e.g. multichannel); tell the user why.
+            if (!isAcceptedSoundfile(file.getFullPathName()))
+            {
+                juce::NativeMessageBox::showMessageBoxAsync(
+                    juce::MessageBoxIconType::WarningIcon, "Unsupported soundfile",
+                    "Only a single mono .wav / .aiff soundfile can be used.");
+                return;
+            }
+
+            setSoundfile(file.getFileName());
+
+            if (onSoundfileDropped)
+                onSoundfileDropped(file);
+        });
     }
 
     void GestureView::setSelected(bool selected)
@@ -195,7 +257,7 @@ namespace rp::uicore
 
         // The label shows only the file name; the callback carries the full file
         // so the host can locate it (e.g. to notify with the full path).
-        soundfileLabel_.setText(file.getFileName(), juce::dontSendNotification);
+        setSoundfile(file.getFileName());
 
         if (onSoundfileDropped)
             onSoundfileDropped(file);
@@ -206,6 +268,12 @@ namespace rp::uicore
         nameLabel_.setBounds(90, 7, 100, 26);
         soundfileLabel_.setBounds(5, 50, 140, 20);
         usageLabel_.setBounds(160, 50, 14, 20);
+
+        // The select button and drop hint occupy the soundfile line, which is
+        // free while no soundfile is associated (label and usage are hidden).
+        selectButton_.setBounds(5, 50, 100, 20);
+        dropHintLabel_.setBounds(110, 50, 105, 20);
+
         thumbnail_.setBounds(220, 10, 60, 60);
     }
 }
