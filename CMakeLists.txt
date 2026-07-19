@@ -7,7 +7,6 @@ add_library(UICore
         source/Waveform.cpp
         source/WaveformRenderer.cpp
         source/MotionView.cpp
-        source/TransportView.cpp
         source/GestureView.cpp
         source/TrajectoryView.cpp
         source/ElevationView.cpp
@@ -24,7 +23,8 @@ add_library(UICore
         source/GlissonSlider/EnabledRenderer.cpp
         source/GlissonSlider/Knob.cpp
         source/Label.cpp
-        source/ProgressBar.cpp)
+        source/ProgressBar.cpp
+        source/LevelIndicator.cpp)
 
 
 add_library(rp::UICore ALIAS UICore)
