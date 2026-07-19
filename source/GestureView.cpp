@@ -80,6 +80,13 @@ namespace rp::uicore
 
         addAndMakeVisible(thumbnail_);
 
+        // Child controls swallow mouse clicks before they reach this view, so a
+        // click on a label, the key box or a button would otherwise never select
+        // the row. Listen to every child (nested editors included) so a click
+        // anywhere in the row still forwards to mouseDown and selects it.
+        for (auto* child : getChildren())
+            child->addMouseListener(this, true);
+
         // Rows start without a soundfile: show the select button and drop hint.
         updateSoundfileArea();
     }

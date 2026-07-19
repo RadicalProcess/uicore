@@ -58,8 +58,8 @@ namespace rp::uicore
         // view has already updated its own label by this point.
         std::function<void(const juce::File &file)> onSoundfileDropped;
 
-        // Called when the row is clicked (outside its child controls), so the host
-        // can select it.
+        // Called when the row is clicked anywhere, including on its child controls
+        // (labels, key box, buttons), so the host can select it.
         std::function<void()> onClicked;
 
         // Called when the user finishes editing the gesture name, with the new
