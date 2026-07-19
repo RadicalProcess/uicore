@@ -9,8 +9,9 @@ namespace rp::uicore
 
     namespace
     {
-        // Radius (in pixels) of the round anchor markers, and the extra slack
-        // added around one when hit testing so it is comfortable to grab.
+        // Radius (in pixels) of the round anchor / elevation-node markers, and the
+        // extra slack added around one when hit testing so it is comfortable to
+        // grab.
         const auto anchorRadius_ = 5.0f;
         const auto anchorHitMargin_ = 4.0f;
 
@@ -19,16 +20,20 @@ namespace rp::uicore
         const auto handleRadius_ = 4.0f;
         const auto handleHitMargin_ = 4.0f;
 
-        // Thickness of the curve, the frame and the handle lines.
+        // Thickness of the curve, the frames and the handle lines.
         const auto curveWidth_ = 2.0f;
         const auto lineWidth_ = 1.5f;
 
-        // Colour of the static square-and-circle reference frame: dim enough to
-        // read as a backdrop without competing with the curve.
+        // Colour of the static reference frames (square, circle, elevation strip
+        // and its zero line): dim enough to read as a backdrop without competing
+        // with the curve.
         const auto frameColour_ = juce::Colour(90, 90, 90);
 
         // The background the view fills itself with.
         const auto backgroundColour_ = juce::Colour(30, 30, 30);
+
+        // Height (in pixels) of the elevation strip along the bottom of the view.
+        const auto elevationStripHeight_ = 150.0f;
 
         // Size (in pixels) of the square clear button tucked into the top-right
         // corner, and the margin kept around it.
@@ -49,9 +54,9 @@ namespace rp::uicore
         const auto waveformAmplitudeFraction_ = 0.12f;
 
         // The playhead is a short line crossing the curve at right angles:
-        // playheadHalfLength_ is how far it reaches either side of the curve,
-        // playheadThickness_ its stroke width, and playheadTangentStep_ the small
-        // step (in pixels) used to estimate the curve tangent at the playhead.
+        // playheadHalfLength_ is how far it reaches either side, playheadThickness_
+        // its stroke width, and playheadTangentStep_ the small step (in pixels)
+        // used to estimate the tangent at the playhead.
         const auto playheadHalfLength_ = 9.0f;
         const auto playheadThickness_ = 2.5f;
         const auto playheadTangentStep_ = 2.0f;
@@ -61,12 +66,19 @@ namespace rp::uicore
         // straight line whose control knobs sit on that line.
         const auto outHandleFraction_ = 1.0f / 3.0f;
         const auto inHandleFraction_ = 2.0f / 3.0f;
+
+        // Maps a point from a -1..1 axis to a pixel position spanning the given
+        // centre and half-extent.
+        float toAxisPixel(float centre, float halfExtent, float normalised)
+        {
+            return centre + normalised * halfExtent;
+        }
     }
 
     TrajectoryView::TrajectoryView()
     : selectedIndex_(-1)
-    , highlightedIndex_(-1)
     , dragMode_(Drag::None)
+    , dragElevationIndex_(-1)
     , curveEdited_(false)
     , clearButton_("clear")
     , waveformButton_("waveform")
@@ -85,16 +97,10 @@ namespace rp::uicore
         addAndMakeVisible(waveformButton_);
     }
 
-    void TrajectoryView::Listener::anchorSelectionChanged(TrajectoryView* /*view*/, int /*selectedIndex*/)
-    {
-        // Does nothing by default: listeners that only track the curve need
-        // not care about the selection.
-    }
-
     void TrajectoryView::Listener::trajectoryEditEnded(TrajectoryView* /*view*/)
     {
         // Does nothing by default: only listeners that commit completed edits
-        // (e.g. to persist the curve) need to care.
+        // (e.g. to persist the trajectory) need to care.
     }
 
     void TrajectoryView::addListener(Listener* listener)
@@ -107,16 +113,6 @@ namespace rp::uicore
         listeners_.remove(listener);
     }
 
-    std::vector<juce::Point<float>> TrajectoryView::getAnchors() const
-    {
-        std::vector<juce::Point<float>> positions;
-        positions.reserve(anchors_.size());
-        for (const auto& anchor : anchors_)
-            positions.push_back(anchor.position);
-
-        return positions;
-    }
-
     const std::vector<TrajectoryView::Anchor>& TrajectoryView::getAnchorData() const
     {
         return anchors_;
@@ -124,25 +120,16 @@ namespace rp::uicore
 
     void TrajectoryView::setAnchorData(const std::vector<Anchor>& anchors)
     {
-        const auto hadSelection = selectedIndex_ >= 0;
-
         anchors_ = anchors;
         selectedIndex_ = -1;
         dragMode_ = Drag::None;
+        dragElevationIndex_ = -1;
         curveEdited_ = false;
 
         // An API update rather than a user edit: neither trajectoryChanged nor
-        // trajectoryEditEnded fires (matching ElevationView::setNodes), so a
-        // host restoring a stored curve does not immediately hear it back.
-        if (hadSelection)
-            notifySelectionChanged();
-
+        // trajectoryEditEnded fires, so a host restoring a stored curve does not
+        // immediately hear it back.
         repaint();
-    }
-
-    float TrajectoryView::getCircleDiameter() const
-    {
-        return squareArea().getWidth();
     }
 
     void TrajectoryView::clear()
@@ -150,30 +137,18 @@ namespace rp::uicore
         if (anchors_.empty())
             return;
 
-        const auto hadSelection = selectedIndex_ >= 0;
-
         anchors_.clear();
         selectedIndex_ = -1;
         dragMode_ = Drag::None;
+        dragElevationIndex_ = -1;
 
         notifyChange();
-        if (hadSelection)
-            notifySelectionChanged();
 
-        // The clear button completes the edit immediately: no mouse release on
-        // the canvas follows, so the emptied curve is committed here.
+        // The clear button completes the edit immediately: no mouse release on the
+        // canvas follows, so the emptied curve is committed here.
         curveEdited_ = false;
         notifyEditEnded();
 
-        repaint();
-    }
-
-    void TrajectoryView::setHighlightedAnchor(int index)
-    {
-        if (highlightedIndex_ == index)
-            return;
-
-        highlightedIndex_ = index;
         repaint();
     }
 
@@ -199,7 +174,12 @@ namespace rp::uicore
     void TrajectoryView::paint(juce::Graphics& g)
     {
         g.fillAll(backgroundColour_);
+        paintPlane(g);
+        paintElevation(g);
+    }
 
+    void TrajectoryView::paintPlane(juce::Graphics& g)
+    {
         // The static reference frame: a centred square with an inscribed circle.
         const auto square = squareArea();
         g.setColour(frameColour_);
@@ -249,17 +229,16 @@ namespace rp::uicore
                 drawHandle(toPixel(anchor.handleOut));
         }
 
-        // The anchor markers on top: the selected one and the externally
-        // highlighted one (the counterpart of a node being dragged in a
-        // companion view) are filled highlight discs, the others hollow
-        // foreground rings. Each marker carries its one-based number above it,
-        // so the anchors read 1, 2, 3... from start to end.
+        // The anchor markers on top: the selected one and the counterpart of an
+        // elevation node being dragged are filled highlight discs, the others
+        // hollow foreground rings. Each marker carries its one-based number above
+        // it, so the anchors read 1, 2, 3... from start to end.
         for (auto i = static_cast<size_t>(0); i < anchors_.size(); ++i)
         {
             const auto centre = toPixel(anchors_[i].position);
             const auto bounds = juce::Rectangle<float>(centre.x - anchorRadius_, centre.y - anchorRadius_, anchorRadius_ * 2.0f, anchorRadius_ * 2.0f);
 
-            if (static_cast<int>(i) == selectedIndex_ || static_cast<int>(i) == highlightedIndex_)
+            if (static_cast<int>(i) == selectedIndex_ || static_cast<int>(i) == dragElevationIndex_)
             {
                 g.setColour(styles::highlight);
                 g.fillEllipse(bounds);
@@ -275,21 +254,98 @@ namespace rp::uicore
             drawNodeLabel(g, centre, anchorRadius_, static_cast<int>(i) + 1);
         }
 
-        // The playhead riding along the curve, drawn on top of everything so the
-        // playback position stays visible. It is a short line crossing the curve
-        // perpendicular to its tangent, in the highlight colour, to match the
-        // Waveform and MotionView playheads.
+        // The playhead riding along the curve, drawn on top so the playback
+        // position stays visible. It is a short line crossing the curve
+        // perpendicular to its tangent, in the highlight colour.
         if (hasCurve && playheadEnabled_)
         {
             const auto totalLength = path.getLength();
             const auto distance = playheadPosition_ * totalLength;
             const auto centre = path.getPointAlongPath(distance);
 
-            // Estimate the tangent from points either side of the playhead. A
-            // tight spot in the curve can make a small step degenerate (both
-            // points coincide), so widen the step until it yields a direction;
-            // this keeps the crossing line perpendicular everywhere. Only a
-            // zero-length curve leaves the fallback vertical normal in place.
+            // Estimate the tangent from points either side of the playhead. A tight
+            // spot in the curve can make a small step degenerate (both points
+            // coincide), so widen the step until it yields a direction; this keeps
+            // the crossing line perpendicular everywhere. Only a zero-length curve
+            // leaves the fallback vertical normal in place.
+            auto normal = juce::Point<float>(0.0f, 1.0f);
+            for (auto step = playheadTangentStep_; step <= totalLength; step *= 2.0f)
+            {
+                const auto behind = path.getPointAlongPath(std::max(0.0f, distance - step));
+                const auto ahead = path.getPointAlongPath(std::min(totalLength, distance + step));
+                const auto tangent = ahead - behind;
+                const auto tangentLength = tangent.getDistanceFromOrigin();
+                if (tangentLength > 0.0f)
+                {
+                    normal = juce::Point<float>(-tangent.y, tangent.x) / tangentLength;
+                    break;
+                }
+            }
+
+            g.setColour(styles::highlight);
+            g.drawLine(juce::Line<float>(centre - normal * playheadHalfLength_, centre + normal * playheadHalfLength_), playheadThickness_);
+        }
+    }
+
+    void TrajectoryView::paintElevation(juce::Graphics& g)
+    {
+        const auto area = elevationArea();
+
+        // The drawing-area frame and the zero-elevation line across its middle.
+        g.setColour(frameColour_);
+        g.drawRect(area, lineWidth_);
+        g.drawLine(area.getX(), area.getCentreY(), area.getRight(), area.getCentreY(), lineWidth_);
+
+        if (anchors_.empty())
+            return;
+
+        // The straight segments joining the nodes in anchor order, built once and
+        // reused for the playhead.
+        juce::Path path;
+        const auto hasGraph = anchors_.size() >= 2;
+        if (hasGraph)
+        {
+            path.startNewSubPath(elevationNodePixel(0));
+            for (auto i = 1; i < static_cast<int>(anchors_.size()); ++i)
+                path.lineTo(elevationNodePixel(i));
+
+            g.setColour(styles::foreground);
+            g.strokePath(path, juce::PathStrokeType(curveWidth_));
+        }
+
+        // The node markers: the one being dragged and the selected anchor's
+        // counterpart are filled highlight discs, the others hollow foreground
+        // rings. Each carries its one-based number, matching the trajectory
+        // anchors.
+        for (auto i = 0; i < static_cast<int>(anchors_.size()); ++i)
+        {
+            const auto centre = elevationNodePixel(i);
+            const auto bounds = juce::Rectangle<float>(centre.x - anchorRadius_, centre.y - anchorRadius_, anchorRadius_ * 2.0f, anchorRadius_ * 2.0f);
+
+            if (i == dragElevationIndex_ || i == selectedIndex_)
+            {
+                g.setColour(styles::highlight);
+                g.fillEllipse(bounds);
+            }
+            else
+            {
+                g.setColour(backgroundColour_);
+                g.fillEllipse(bounds);
+                g.setColour(styles::foreground);
+                g.drawEllipse(bounds, lineWidth_);
+            }
+
+            drawNodeLabel(g, centre, anchorRadius_, i + 1);
+        }
+
+        // The playhead riding along the elevation graph, matching the trajectory
+        // playhead.
+        if (hasGraph && playheadEnabled_)
+        {
+            const auto totalLength = path.getLength();
+            const auto distance = playheadPosition_ * totalLength;
+            const auto centre = path.getPointAlongPath(distance);
+
             auto normal = juce::Point<float>(0.0f, 1.0f);
             for (auto step = playheadTangentStep_; step <= totalLength; step *= 2.0f)
             {
@@ -313,8 +369,8 @@ namespace rp::uicore
     {
         clearButton_.setBounds(getWidth() - clearButtonSize_ - clearButtonMargin_, clearButtonMargin_, clearButtonSize_, clearButtonSize_);
 
-        // The waveform toggle sits just left of the clear button, sharing its
-        // row and height.
+        // The waveform toggle sits just left of the clear button, sharing its row
+        // and height.
         const auto waveformButtonX = clearButton_.getX() - waveformButtonGap_ - waveformButtonWidth_;
         waveformButton_.setBounds(waveformButtonX, clearButtonMargin_, waveformButtonWidth_, clearButtonSize_);
 
@@ -324,6 +380,19 @@ namespace rp::uicore
     void TrajectoryView::mouseDown(const juce::MouseEvent& event)
     {
         const auto position = event.position;
+
+        // A press in the elevation strip only ever grabs an existing node to drag
+        // its elevation; nodes are never created there.
+        if (position.y >= static_cast<float>(getHeight()) - elevationStripHeight_)
+        {
+            const auto index = elevationNodeAt(position);
+            if (index < 0)
+                return;
+
+            dragElevationIndex_ = index;
+            repaint();
+            return;
+        }
 
         // Grabbing a handle of the selected anchor takes priority so handles that
         // sit near their anchor are still reachable. Shift-clicking a handle
@@ -361,16 +430,14 @@ namespace rp::uicore
             // click selects it and arms a possible move.
             if (event.mods.isShiftDown())
             {
-                const auto hadSelection = selectedIndex_ >= 0;
-
                 anchors_.erase(anchors_.begin() + index);
 
-                // Removing an interior anchor leaves its two neighbours joined
-                // by a new segment. The bordering handles still lean towards the
-                // removed anchor, which bends the fresh segment. Reset them to
-                // their straight-line defaults so the reconnected anchors are
-                // linked by a straight line, matching how a freshly appended
-                // anchor joins the previous one.
+                // Removing an interior anchor leaves its two neighbours joined by a
+                // new segment. The bordering handles still lean towards the removed
+                // anchor, which bends the fresh segment. Reset them to their
+                // straight-line defaults so the reconnected anchors are linked by a
+                // straight line, matching how a freshly appended anchor joins the
+                // previous one.
                 const auto hasPrevious = index > 0;
                 const auto hasNext = index < static_cast<int>(anchors_.size());
                 if (hasPrevious && hasNext)
@@ -387,18 +454,13 @@ namespace rp::uicore
                 selectedIndex_ = -1;
                 dragMode_ = Drag::None;
                 notifyChange();
-                if (hadSelection)
-                    notifySelectionChanged();
 
                 repaint();
                 return;
             }
 
-            const auto selectionChanged = index != selectedIndex_;
             selectedIndex_ = index;
             dragMode_ = Drag::Anchor;
-            if (selectionChanged)
-                notifySelectionChanged();
 
             repaint();
             return;
@@ -408,10 +470,10 @@ namespace rp::uicore
         if (event.mods.isShiftDown())
             return;
 
-        // Clicking empty space appends a new anchor to the single curve and
-        // selects it. The new anchor joins the previous one with a straight
-        // segment, so the previous anchor's out handle and the new anchor's in
-        // handle are placed on the line between them.
+        // Clicking empty space appends a new anchor to the single curve and selects
+        // it. The new anchor joins the previous one with a straight segment, so the
+        // previous anchor's out handle and the new anchor's in handle are placed on
+        // the line between them.
         const auto normalised = toNormalised(position);
         Anchor anchor;
         anchor.position = normalised;
@@ -434,16 +496,26 @@ namespace rp::uicore
         selectedIndex_ = static_cast<int>(anchors_.size()) - 1;
         dragMode_ = Drag::Anchor;
 
-        // The curve notification goes out first so listeners that mirror the
-        // anchors into a companion view have the new anchor in place before
-        // they are told it is selected.
         notifyChange();
-        notifySelectionChanged();
         repaint();
     }
 
     void TrajectoryView::mouseDrag(const juce::MouseEvent& event)
     {
+        // Dragging an elevation node moves it vertically only; its horizontal
+        // position is fixed by its anchor.
+        if (dragElevationIndex_ >= 0)
+        {
+            const auto area = elevationArea();
+            const auto halfHeight = area.getHeight() * 0.5f;
+            const auto value = (halfHeight > 0.0f) ? (area.getCentreY() - event.position.y) / halfHeight : 0.0f;
+            anchors_[static_cast<size_t>(dragElevationIndex_)].elevation = std::clamp(value, -1.0f, 1.0f);
+
+            notifyChange();
+            repaint();
+            return;
+        }
+
         if (dragMode_ == Drag::None || selectedIndex_ < 0)
             return;
 
@@ -455,10 +527,10 @@ namespace rp::uicore
             case Drag::Anchor:
             {
                 // Move the anchor. A handle the user has bent keeps its shape
-                // relative to the anchor, so it is carried along by the same
-                // delta; an untouched handle is re-straightened below so the
-                // segment it borders stays straight instead of bending just
-                // because its endpoint moved.
+                // relative to the anchor, so it is carried along by the same delta;
+                // an untouched handle is re-straightened below so the segment it
+                // borders stays straight instead of bending just because its
+                // endpoint moved.
                 const auto delta = normalised - anchor.position;
                 anchor.position = normalised;
                 if (anchor.handleInCustomised)
@@ -470,8 +542,8 @@ namespace rp::uicore
             }
 
             case Drag::HandleOut:
-                // Dragging a handle bends the adjoining segment; mark it so the
-                // bend survives later anchor moves.
+                // Dragging a handle bends the adjoining segment; mark it so the bend
+                // survives later anchor moves.
                 anchor.handleOut = normalised;
                 anchor.handleOutCustomised = true;
                 break;
@@ -492,10 +564,11 @@ namespace rp::uicore
     void TrajectoryView::mouseUp(const juce::MouseEvent&)
     {
         dragMode_ = Drag::None;
+        dragElevationIndex_ = -1;
 
         // One completed edit per press-drag-release cycle: the release commits
-        // whatever the press and drags changed. A plain selection click never
-        // marks the curve as edited, so it commits nothing.
+        // whatever the press and drags changed. A plain selection click never marks
+        // the trajectory as edited, so it commits nothing.
         if (!curveEdited_)
             return;
 
@@ -503,31 +576,72 @@ namespace rp::uicore
         notifyEditEnded();
     }
 
+    juce::Rectangle<float> TrajectoryView::planeArea() const
+    {
+        return getLocalBounds().toFloat().withTrimmedBottom(elevationStripHeight_);
+    }
+
     juce::Rectangle<float> TrajectoryView::squareArea() const
     {
-        const auto bounds = getLocalBounds().toFloat().reduced(anchorRadius_ + 1.0f);
+        const auto bounds = planeArea().reduced(anchorRadius_ + 1.0f);
         const auto side = std::min(bounds.getWidth(), bounds.getHeight());
         return juce::Rectangle<float>(side, side).withCentre(bounds.getCentre());
     }
 
+    juce::Rectangle<float> TrajectoryView::elevationArea() const
+    {
+        const auto square = squareArea();
+        const auto band = juce::Rectangle<float>(0.0f, static_cast<float>(getHeight()) - elevationStripHeight_,
+                                                 static_cast<float>(getWidth()), elevationStripHeight_)
+                              .reduced(0.0f, anchorRadius_ + 1.0f);
+
+        // As wide as the circle above and centred under it, so a node lines up
+        // horizontally with its anchor.
+        return juce::Rectangle<float>(square.getWidth(), band.getHeight())
+            .withCentre({ square.getCentreX(), band.getCentreY() });
+    }
+
     juce::Point<float> TrajectoryView::toPixel(juce::Point<float> normalised) const
     {
-        // Normalised coordinates map into the reference square, which is always
-        // 1:1, so the curve keeps its proportions when the component is resized.
         const auto area = squareArea();
-        return { area.getX() + normalised.x * area.getWidth(), area.getY() + normalised.y * area.getHeight() };
+        return { toAxisPixel(area.getCentreX(), area.getWidth() * 0.5f, normalised.x),
+                 toAxisPixel(area.getCentreY(), area.getHeight() * 0.5f, normalised.y) };
     }
 
     juce::Point<float> TrajectoryView::toNormalised(juce::Point<float> pixel) const
     {
         const auto area = squareArea();
-        const auto width = area.getWidth();
-        const auto height = area.getHeight();
+        const auto halfWidth = area.getWidth() * 0.5f;
+        const auto halfHeight = area.getHeight() * 0.5f;
 
-        const auto x = (width > 0.0f) ? (pixel.x - area.getX()) / width : 0.0f;
-        const auto y = (height > 0.0f) ? (pixel.y - area.getY()) / height : 0.0f;
+        const auto x = (halfWidth > 0.0f) ? (pixel.x - area.getCentreX()) / halfWidth : 0.0f;
+        const auto y = (halfHeight > 0.0f) ? (pixel.y - area.getCentreY()) / halfHeight : 0.0f;
 
-        return { std::clamp(x, 0.0f, 1.0f), std::clamp(y, 0.0f, 1.0f) };
+        return { std::clamp(x, -1.0f, 1.0f), std::clamp(y, -1.0f, 1.0f) };
+    }
+
+    juce::Point<float> TrajectoryView::elevationNodePixel(int index) const
+    {
+        const auto area = elevationArea();
+        const auto& anchor = anchors_[static_cast<size_t>(index)];
+
+        // The node's x follows its anchor's x; its height encodes the elevation,
+        // with +y drawn upwards.
+        return { toAxisPixel(area.getCentreX(), area.getWidth() * 0.5f, anchor.position.x),
+                 toAxisPixel(area.getCentreY(), area.getHeight() * 0.5f, -anchor.elevation) };
+    }
+
+    int TrajectoryView::elevationNodeAt(juce::Point<float> point) const
+    {
+        const auto reach = anchorRadius_ + anchorHitMargin_;
+
+        for (auto i = 0; i < static_cast<int>(anchors_.size()); ++i)
+        {
+            if (point.getDistanceFrom(elevationNodePixel(i)) <= reach)
+                return i;
+        }
+
+        return -1;
     }
 
     bool TrajectoryView::showHandleIn(int index) const
@@ -560,9 +674,9 @@ namespace rp::uicore
     {
         auto& anchor = anchors_[static_cast<size_t>(index)];
 
-        // The incoming segment (previous -> this) is bordered by this anchor's
-        // in handle and the previous anchor's out handle; straighten whichever
-        // of the two the user has not bent.
+        // The incoming segment (previous -> this) is bordered by this anchor's in
+        // handle and the previous anchor's out handle; straighten whichever of the
+        // two the user has not bent.
         if (showHandleIn(index))
         {
             auto& previous = anchors_[static_cast<size_t>(index) - 1];
@@ -590,8 +704,8 @@ namespace rp::uicore
     {
         const auto toPixel = [&square](juce::Point<float> normalised)
         {
-            return juce::Point<float>(square.getX() + normalised.x * square.getWidth(),
-                                      square.getY() + normalised.y * square.getHeight());
+            return juce::Point<float>(toAxisPixel(square.getCentreX(), square.getWidth() * 0.5f, normalised.x),
+                                      toAxisPixel(square.getCentreY(), square.getHeight() * 0.5f, normalised.y));
         };
 
         path.startNewSubPath(toPixel(anchors.front().position));
@@ -608,8 +722,8 @@ namespace rp::uicore
     {
         const auto reach = anchorRadius_ + anchorHitMargin_;
 
-        // Walk from the end so the most recently added anchor, drawn last, wins
-        // when markers overlap.
+        // Walk from the end so the most recently added anchor, drawn last, wins when
+        // markers overlap.
         for (auto i = static_cast<int>(anchors_.size()) - 1; i >= 0; --i)
         {
             const auto centre = toPixel(anchors_[static_cast<size_t>(i)].position);
@@ -640,15 +754,10 @@ namespace rp::uicore
 
     void TrajectoryView::notifyChange()
     {
-        // Every path that changes the curve funnels through here, so the mouse
+        // Every path that changes the trajectory funnels through here, so the mouse
         // release can tell an edit happened during the current press cycle.
         curveEdited_ = true;
         listeners_.call([this](Listener& listener) { listener.trajectoryChanged(this); });
-    }
-
-    void TrajectoryView::notifySelectionChanged()
-    {
-        listeners_.call([this](Listener& listener) { listener.anchorSelectionChanged(this, selectedIndex_); });
     }
 
     void TrajectoryView::notifyEditEnded()

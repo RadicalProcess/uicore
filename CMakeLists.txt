@@ -9,7 +9,6 @@ add_library(UICore
         source/MotionView.cpp
         source/GestureView.cpp
         source/TrajectoryView.cpp
-        source/ElevationView.cpp
         source/NodeLabel.cpp
         source/TrajectoryThumbnail.cpp
         source/OpenGLView.cpp
