@@ -167,7 +167,7 @@ namespace rp::uicore
 
         // The node handles drawn on top: hollow circles whose interior matches
         // the background, with the dragged one filled in the highlight colour,
-        // matching the anchor/node style of the trajectory and elevation views.
+        // matching the anchor/node style of the trajectory view.
         const auto diameter = nodeHalfSize_ * 2.0f;
         for (auto i = static_cast<size_t>(0); i < points_.size(); ++i)
         {
