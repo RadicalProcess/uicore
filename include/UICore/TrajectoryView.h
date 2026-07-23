@@ -117,6 +117,14 @@ namespace rp::uicore
         // the curve has at least two anchors.
         void setWaveformData(const std::vector<float>& waveformData);
 
+        // Allows or blocks user edits. Editable by default. While not editable,
+        // every mouse interaction on the canvas is ignored and the clear button
+        // is disabled; disabling also deselects the current anchor (hiding its
+        // handles and highlight) and aborts any in-progress drag, committing the
+        // changes that drag already made (see trajectoryEditEnded). The playhead
+        // and the waveform toggle stay live, so a host can show pure playback.
+        void setEditable(bool editable);
+
         // Shows or hides the playhead: short lines crossing the curve and the
         // elevation graph at the position set by setPlayheadPosition. Hidden by
         // default, and only ever drawn while there are at least two anchors.
@@ -218,6 +226,9 @@ namespace rp::uicore
         // Whether the trajectory changed since the last mouse press, so the mouse
         // release knows whether to announce a completed edit.
         bool curveEdited_;
+
+        // Whether user edits are accepted (see setEditable).
+        bool editable_;
 
         // Clears the whole curve.
         juce::TextButton clearButton_;

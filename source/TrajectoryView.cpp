@@ -80,6 +80,7 @@ namespace rp::uicore
     , dragMode_(Drag::None)
     , dragElevationIndex_(-1)
     , curveEdited_(false)
+    , editable_(true)
     , clearButton_("clear")
     , waveformButton_("waveform")
     , playheadEnabled_(false)
@@ -156,6 +157,38 @@ namespace rp::uicore
     {
         // The renderer holds channels; the curve carries a single mono channel.
         waveformRenderer_.setWaveformData({ waveformData });
+        repaint();
+    }
+
+    void TrajectoryView::setEditable(bool editable)
+    {
+        if (editable_ == editable)
+            return;
+
+        editable_ = editable;
+        clearButton_.setEnabled(editable);
+
+        if (editable)
+        {
+            repaint();
+            return;
+        }
+
+        // Becoming non-editable deselects the anchor so its handles and
+        // highlight disappear, and aborts any in-progress drag. The changes the
+        // drag already made are committed right away: no mouse release will
+        // follow on the canvas, and dropping them would leave the drawn curve
+        // diverged from what the host last heard.
+        selectedIndex_ = -1;
+        dragMode_ = Drag::None;
+        dragElevationIndex_ = -1;
+
+        if (curveEdited_)
+        {
+            curveEdited_ = false;
+            notifyEditEnded();
+        }
+
         repaint();
     }
 
@@ -379,6 +412,9 @@ namespace rp::uicore
 
     void TrajectoryView::mouseDown(const juce::MouseEvent& event)
     {
+        if (!editable_)
+            return;
+
         const auto position = event.position;
 
         // A press in the elevation strip only ever grabs an existing node to drag
@@ -502,6 +538,9 @@ namespace rp::uicore
 
     void TrajectoryView::mouseDrag(const juce::MouseEvent& event)
     {
+        if (!editable_)
+            return;
+
         // Dragging an elevation node moves it vertically only; its horizontal
         // position is fixed by its anchor.
         if (dragElevationIndex_ >= 0)
@@ -563,6 +602,9 @@ namespace rp::uicore
 
     void TrajectoryView::mouseUp(const juce::MouseEvent&)
     {
+        if (!editable_)
+            return;
+
         dragMode_ = Drag::None;
         dragElevationIndex_ = -1;
 
