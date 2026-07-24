@@ -39,6 +39,18 @@ namespace rp::uicore
         // Sets the room size in metres along the z axis (see setWidth).
         void setDepth(float depthMetres);
 
+        // Sets the trajectory line drawn for the active gesture, given as a
+        // sequence of points already unnormalized to the room's world-space
+        // metres (see rp::sgd::core::toRoomPosition/makeTrajectoryLine). Points
+        // are drawn as a connected line strip; an empty vector removes the
+        // line. Replaces any previously set trajectory.
+        void setTrajectory(std::vector<juce::Vector3D<float>> points);
+
+        // Sets the source sphere's position, already unnormalized to the
+        // room's world-space metres (see setTrajectory). The sphere is drawn
+        // at this position on every frame until changed.
+        void setSourcePosition(juce::Vector3D<float> position);
+
     private:
         void mouseDown(const juce::MouseEvent& event) override;
         void mouseDrag(const juce::MouseEvent& event) override;
@@ -49,7 +61,10 @@ namespace rp::uicore
         void buildGeometry();
         void buildModelGeometry();
         void buildGridGeometry();
+        void buildTrajectoryGeometry();
+        void buildSourceGeometry();
         void markGridDirty();
+        void markSceneDirty();
 
         juce::OpenGLContext openGLContext_;
         std::unique_ptr<juce::OpenGLShaderProgram> shader_;
@@ -60,15 +75,25 @@ namespace rp::uicore
 
         unsigned int modelBuffer_;
         unsigned int gridBuffer_;
+        unsigned int trajectoryBuffer_;
+        unsigned int sourceBuffer_;
         std::vector<float> modelVertices_;
         std::vector<float> gridVertices_;
+        std::vector<float> trajectoryVertices_;
+        std::vector<float> sourceVertices_;
         int modelVertexCount_;
         int gridVertexCount_;
+        int trajectoryVertexCount_;
+        int sourceVertexCount_;
 
         float roomWidth_;
         float roomHeight_;
         float roomDepth_;
         bool gridGeometryDirty_;
+
+        std::vector<juce::Vector3D<float>> trajectoryPoints_;
+        juce::Vector3D<float> sourcePosition_;
+        bool sceneGeometryDirty_;
 
         float cameraAzimuth_;
         float cameraElevation_;
