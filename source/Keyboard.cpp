@@ -1,4 +1,5 @@
 #include <UICore/Keyboard.h>
+#include <UICore/Style.h>
 
 namespace rp::uicore
 {
@@ -16,6 +17,7 @@ namespace rp::uicore
         constexpr int kNoteA = 9;
 
         const juce::Colour kSelectionColour = juce::Colours::red;
+        const juce::Colour kPlayingOverlayColour = styles::playing.withAlpha(0.55f);
     }
 
     Keyboard::Keyboard(juce::MidiKeyboardState& state, Orientation orientation)
@@ -77,6 +79,14 @@ namespace rp::uicore
         return selectedNote_;
     }
 
+    void Keyboard::setPlaying(int midiNoteNumber, bool playing)
+    {
+        const auto changed = playing ? playingNotes_.insert(midiNoteNumber).second
+                                      : playingNotes_.erase(midiNoteNumber) > 0;
+        if (changed)
+            repaint();
+    }
+
     void Keyboard::drawWhiteNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
                                  bool isDown, bool isOver, juce::Colour lineColour, juce::Colour textColour)
     {
@@ -93,6 +103,8 @@ namespace rp::uicore
 
         if (midiNoteNumber == selectedNote_)
             drawSelectionOutline(g, area);
+
+        drawPlayingOverlay(midiNoteNumber, g, area);
     }
 
     void Keyboard::drawBlackNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
@@ -105,6 +117,8 @@ namespace rp::uicore
 
         if (midiNoteNumber == selectedNote_)
             drawSelectionOutline(g, area);
+
+        drawPlayingOverlay(midiNoteNumber, g, area);
     }
 
     juce::String Keyboard::getWhiteNoteText(int midiNoteNumber)
@@ -120,6 +134,15 @@ namespace rp::uicore
         const auto outline = area.reduced(1.0f);
         g.setColour(kSelectionColour);
         g.drawRect(outline, 2.0f);
+    }
+
+    void Keyboard::drawPlayingOverlay(int midiNoteNumber, juce::Graphics& g, const juce::Rectangle<float>& area) const
+    {
+        if (playingNotes_.find(midiNoteNumber) == playingNotes_.end())
+            return;
+
+        g.setColour(kPlayingOverlayColour);
+        g.fillRect(area);
     }
 
     const juce::Colour* Keyboard::findColor(int midiNoteNumber) const

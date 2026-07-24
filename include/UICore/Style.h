@@ -8,6 +8,7 @@ namespace rp::uicore::styles
     const auto background = juce::Colour(juce::Colour(5, 61, 87));
     const auto foreground = juce::Colour(juce::Colour(151, 188, 199));
     const auto text = juce::Colours::white;
+    const auto playing = juce::Colour(juce::Colour(96, 209, 132));
 
     const auto strokeType = juce::PathStrokeType( 3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
 }
