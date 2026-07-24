@@ -1,5 +1,7 @@
 #include "GestureView.h"
 
+#include "ColorPalette.h"
+
 namespace rp::uicore
 {
     namespace
@@ -8,6 +10,12 @@ namespace rp::uicore
         // the 88 keys of a piano keyboard.
         const auto firstKey = 0;
         const auto lastKey = 127;
+
+        // Width of the left-edge colour swatch, and the margin controls keep
+        // clear of it.
+        constexpr int kColorStripWidth = 14;
+        constexpr int kColorStripMargin = 4;
+        constexpr int kContentLeft = kColorStripWidth + kColorStripMargin;
 
         juce::String keyName(int midiNote)
         {
@@ -97,6 +105,9 @@ namespace rp::uicore
         g.setColour(juce::Colour(juce::Colours::white));
         g.drawRoundedRectangle(getLocalBounds().toFloat(), 5.0f, 1.0f);
 
+        g.setColour(currentColour_);
+        g.fillRoundedRectangle(colorStripBounds().toFloat(), 3.0f);
+
         if (selected_)
         {
             g.setColour(juce::Colours::cornflowerblue);
@@ -121,10 +132,43 @@ namespace rp::uicore
                    bounds.reduced(6), juce::Justification::centredBottom, false);
     }
 
-    void GestureView::mouseDown(const juce::MouseEvent &)
+    void GestureView::mouseDown(const juce::MouseEvent &event)
     {
         if (onClicked)
             onClicked();
+
+        // A click physically on the swatch opens the palette; clicks forwarded
+        // from child controls land outside the strip and are ignored here.
+        if (colorStripBounds().contains(event.getEventRelativeTo(this).getPosition()))
+            openColorPalette();
+    }
+
+    juce::Rectangle<int> GestureView::colorStripBounds() const
+    {
+        return getLocalBounds().reduced(kColorStripMargin).removeFromLeft(kColorStripWidth);
+    }
+
+    void GestureView::openColorPalette()
+    {
+        auto palette = std::make_unique<ColorPalette>();
+        palette->setSelectedColour(currentColour_);
+
+        auto *paletteRaw = palette.get();
+        const juce::Component::SafePointer<GestureView> safeThis(this);
+        palette->onColourPicked = [safeThis, paletteRaw](juce::Colour colour)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->setColor(colour);
+                if (safeThis->onColorChanged)
+                    safeThis->onColorChanged(colour);
+            }
+
+            if (auto *box = paletteRaw->findParentComponentOfClass<juce::CallOutBox>())
+                box->dismiss();
+        };
+
+        juce::CallOutBox::launchAsynchronously(std::move(palette), localAreaToGlobal(colorStripBounds()), nullptr);
     }
 
     void GestureView::setName(const juce::String &name)
@@ -203,6 +247,15 @@ namespace rp::uicore
         repaint();
     }
 
+    void GestureView::setColor(juce::Colour colour)
+    {
+        if (currentColour_ == colour)
+            return;
+
+        currentColour_ = colour;
+        repaint();
+    }
+
     void GestureView::refreshKeyAvailability()
     {
         for (auto note = firstKey; note <= lastKey; ++note)
@@ -271,16 +324,17 @@ namespace rp::uicore
     }
 
     void GestureView::resized() {
-        keyBox_.setBounds(5, 5, 70, 30);
-        nameLabel_.setBounds(90, 7, 100, 26);
-        soundfileLabel_.setBounds(5, 50, 140, 20);
-        usageLabel_.setBounds(160, 50, 14, 20);
+        // Everything shifts right of the left-edge colour swatch.
+        keyBox_.setBounds(kContentLeft + 5, 5, 70, 30);
+        nameLabel_.setBounds(kContentLeft + 90, 7, 100, 26);
+        soundfileLabel_.setBounds(kContentLeft + 5, 50, 140, 20);
+        usageLabel_.setBounds(kContentLeft + 160, 50, 14, 20);
 
         // The select button and drop hint occupy the soundfile line, which is
         // free while no soundfile is associated (label and usage are hidden).
-        selectButton_.setBounds(5, 50, 100, 20);
-        dropHintLabel_.setBounds(110, 50, 105, 20);
+        selectButton_.setBounds(kContentLeft + 5, 50, 100, 20);
+        dropHintLabel_.setBounds(kContentLeft + 110, 50, 105, 20);
 
-        thumbnail_.setBounds(220, 10, 60, 60);
+        thumbnail_.setBounds(kContentLeft + 220, 10, 60, 60);
     }
 }

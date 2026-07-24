@@ -54,6 +54,9 @@ namespace rp::uicore
         // Draw the row as selected / unselected.
         void setSelected(bool selected);
 
+        // Set the colour of the left-edge swatch. onColorChanged is not fired.
+        void setColor(juce::Colour colour);
+
         // Called after a valid soundfile is dropped, with the dropped file. The
         // view has already updated its own label by this point.
         std::function<void(const juce::File &file)> onSoundfileDropped;
@@ -65,6 +68,9 @@ namespace rp::uicore
         // Called when the user finishes editing the gesture name, with the new
         // text.
         std::function<void(const juce::String &name)> onNameChanged;
+
+        // Called when the user picks a colour from the swatch's palette popup.
+        std::function<void(juce::Colour colour)> onColorChanged;
 
         // Called when the user picks a different key in the dropdown, with the new
         // MIDI note.
@@ -78,6 +84,12 @@ namespace rp::uicore
 
         // Re-enable every note, then disable the ones the provider reports as taken.
         void refreshKeyAvailability();
+
+        // The left-edge colour swatch's bounds within this row.
+        juce::Rectangle<int> colorStripBounds() const;
+
+        // Open the colour palette popup anchored on the swatch.
+        void openColorPalette();
 
         // Swap the soundfile area between the name label (soundfile associated)
         // and the select button plus drag-and-drop hint (no soundfile yet).
@@ -100,6 +112,9 @@ namespace rp::uicore
 
         // Whether this row is the selected one; drives the selection highlight.
         bool selected_ = false;
+
+        // Colour drawn in the left-edge swatch; picked from the palette popup.
+        juce::Colour currentColour_;
 
         // Selects the key that triggers the gesture; populated with every MIDI
         // note.
