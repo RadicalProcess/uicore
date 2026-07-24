@@ -8,6 +8,7 @@ add_library(UICore
         source/WaveformRenderer.cpp
         source/MotionView.cpp
         source/GestureView.cpp
+        source/ColorPalette.cpp
         source/TrajectoryView.cpp
         source/NodeLabel.cpp
         source/TrajectoryThumbnail.cpp
