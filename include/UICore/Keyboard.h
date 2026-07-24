@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -10,10 +11,13 @@ namespace rp::uicore
 
     // An 88-key (A0..C8) piano keyboard built on juce::MidiKeyboardComponent.
     //
-    // On top of the standard component it adds three things:
+    // On top of the standard component it adds four things:
     //   * per-key fill colours (setColor / clearColor / clearColors),
     //   * an octave label under every A key (A0, A1, A2, ...),
-    //   * a single "selected" key that is drawn with an outline (setSelection).
+    //   * a single "selected" key that is drawn with an outline (setSelection),
+    //   * a "playing" overlay wash on any number of keys (setPlaying), layered
+    //     on top of the fill colour and independent of it, so callers driving
+    //     transient playback feedback never disturb the persistent fill colour.
     //
     // The keyboard shares a juce::MidiKeyboardState with the host, following the
     // usual JUCE idiom; the state must outlive the view.
@@ -45,6 +49,11 @@ namespace rp::uicore
         // The currently selected key, or -1 when nothing is selected.
         int getSelection() const noexcept;
 
+        // Marks a key as currently playing (or not), drawing a translucent
+        // overlay on top of the key's usual fill colour. Independent of
+        // setColor/clearColor, so it never overwrites the persistent fill.
+        void setPlaying(int midiNoteNumber, bool playing);
+
     protected:
         void resized() override;
         void drawWhiteNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
@@ -57,11 +66,15 @@ namespace rp::uicore
         // Draws the selection outline inside a key's area.
         void drawSelectionOutline(juce::Graphics& g, const juce::Rectangle<float>& area) const;
 
+        // Draws the playing overlay wash inside a key's area, if applicable.
+        void drawPlayingOverlay(int midiNoteNumber, juce::Graphics& g, const juce::Rectangle<float>& area) const;
+
         // Returns the custom colour for a key, or an empty optional when none is set.
         const juce::Colour* findColor(int midiNoteNumber) const;
 
         std::map<int, juce::Colour> keyColours_;
         int selectedNote_ = -1;
+        std::set<int> playingNotes_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Keyboard)
     };
