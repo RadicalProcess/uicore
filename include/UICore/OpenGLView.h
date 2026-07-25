@@ -39,17 +39,23 @@ namespace rp::uicore
         // Sets the room size in metres along the z axis (see setWidth).
         void setDepth(float depthMetres);
 
-        // Sets the trajectory line drawn for the active gesture, given as a
-        // sequence of points already unnormalized to the room's world-space
-        // metres (see rp::sgd::core::toRoomPosition/makeTrajectoryLine). Points
-        // are drawn as a connected line strip; an empty vector removes the
-        // line. Replaces any previously set trajectory.
-        void setTrajectory(std::vector<juce::Vector3D<float>> points);
+        // One path drawn inside the room: the line itself, the position of the
+        // source sphere riding along it, and the colour both are drawn in. All
+        // coordinates are already unnormalized to the room's world-space metres
+        // (see rp::sgd::core::toRoomPosition/makeTrajectoryLine).
+        struct Trajectory
+        {
+            std::vector<juce::Vector3D<float>> points;
+            juce::Vector3D<float> sourcePosition;
+            juce::Colour colour;
+        };
 
-        // Sets the source sphere's position, already unnormalized to the
-        // room's world-space metres (see setTrajectory). The sphere is drawn
-        // at this position on every frame until changed.
-        void setSourcePosition(juce::Vector3D<float> position);
+        // Sets every path shown in the scene at once, so several of them can be
+        // drawn side by side, each in its own colour. The points of one entry
+        // are connected into a line and its source sphere is drawn at
+        // sourcePosition. Replaces everything previously set; an empty vector
+        // leaves only the room and the model.
+        void setTrajectories(std::vector<Trajectory> trajectories);
 
     private:
         void mouseDown(const juce::MouseEvent& event) override;
@@ -91,8 +97,7 @@ namespace rp::uicore
         float roomDepth_;
         bool gridGeometryDirty_;
 
-        std::vector<juce::Vector3D<float>> trajectoryPoints_;
-        juce::Vector3D<float> sourcePosition_;
+        std::vector<Trajectory> trajectories_;
         bool sceneGeometryDirty_;
 
         float cameraAzimuth_;

@@ -283,10 +283,19 @@ namespace rp::uicore
     {
         trajectoryVertices_.clear();
 
-        const auto lineColour = styles::highlight;
-
-        for (const auto& point : trajectoryPoints_)
-            appendVertex(trajectoryVertices_, point.x, point.y, point.z, lineColour);
+        // Every trajectory goes into the same buffer, so the lines are built as
+        // separate segments rather than a strip: a strip would join the last
+        // point of one path to the first point of the next.
+        for (const auto& trajectory : trajectories_)
+        {
+            for (auto index = size_t{1}; index < trajectory.points.size(); ++index)
+            {
+                const auto& from = trajectory.points[index - 1];
+                const auto& to = trajectory.points[index];
+                appendVertex(trajectoryVertices_, from.x, from.y, from.z, trajectory.colour);
+                appendVertex(trajectoryVertices_, to.x, to.y, to.z, trajectory.colour);
+            }
+        }
 
         trajectoryVertexCount_ = static_cast<int>(trajectoryVertices_.size()) / 6;
     }
@@ -295,41 +304,43 @@ namespace rp::uicore
     {
         sourceVertices_.clear();
 
-        // A small UV sphere marking the source position, drawn as filled
+        // A small UV sphere marking each source position, drawn as filled
         // triangles so it reads clearly against the wireframe grid.
-        const auto sphereColour = styles::highlight;
-
-        const auto vertexAt = [&sourcePosition = sourcePosition_](float latitude, float longitude)
+        for (const auto& trajectory : trajectories_)
         {
-            return std::array<float, 3>{
-                sourcePosition.x + sourceSphereRadius * std::cos(latitude) * std::sin(longitude),
-                sourcePosition.y + sourceSphereRadius * std::sin(latitude),
-                sourcePosition.z + sourceSphereRadius * std::cos(latitude) * std::cos(longitude)
-            };
-        };
-
-        for (auto latStep = 0; latStep < sourceSphereLatitudeSteps; ++latStep)
-        {
-            const auto latitude0 = -pi / 2.0f + pi * static_cast<float>(latStep) / sourceSphereLatitudeSteps;
-            const auto latitude1 = -pi / 2.0f + pi * static_cast<float>(latStep + 1) / sourceSphereLatitudeSteps;
-
-            for (auto lonStep = 0; lonStep < sourceSphereLongitudeSteps; ++lonStep)
+            const auto& centre = trajectory.sourcePosition;
+            const auto vertexAt = [&centre](float latitude, float longitude)
             {
-                const auto longitude0 = 2.0f * pi * static_cast<float>(lonStep) / sourceSphereLongitudeSteps;
-                const auto longitude1 = 2.0f * pi * static_cast<float>(lonStep + 1) / sourceSphereLongitudeSteps;
+                return std::array<float, 3>{
+                    centre.x + sourceSphereRadius * std::cos(latitude) * std::sin(longitude),
+                    centre.y + sourceSphereRadius * std::sin(latitude),
+                    centre.z + sourceSphereRadius * std::cos(latitude) * std::cos(longitude)
+                };
+            };
 
-                const auto a = vertexAt(latitude0, longitude0);
-                const auto b = vertexAt(latitude1, longitude0);
-                const auto c = vertexAt(latitude1, longitude1);
-                const auto d = vertexAt(latitude0, longitude1);
+            for (auto latStep = 0; latStep < sourceSphereLatitudeSteps; ++latStep)
+            {
+                const auto latitude0 = -pi / 2.0f + pi * static_cast<float>(latStep) / sourceSphereLatitudeSteps;
+                const auto latitude1 = -pi / 2.0f + pi * static_cast<float>(latStep + 1) / sourceSphereLatitudeSteps;
 
-                appendVertex(sourceVertices_, a[0], a[1], a[2], sphereColour);
-                appendVertex(sourceVertices_, b[0], b[1], b[2], sphereColour);
-                appendVertex(sourceVertices_, c[0], c[1], c[2], sphereColour);
+                for (auto lonStep = 0; lonStep < sourceSphereLongitudeSteps; ++lonStep)
+                {
+                    const auto longitude0 = 2.0f * pi * static_cast<float>(lonStep) / sourceSphereLongitudeSteps;
+                    const auto longitude1 = 2.0f * pi * static_cast<float>(lonStep + 1) / sourceSphereLongitudeSteps;
 
-                appendVertex(sourceVertices_, a[0], a[1], a[2], sphereColour);
-                appendVertex(sourceVertices_, c[0], c[1], c[2], sphereColour);
-                appendVertex(sourceVertices_, d[0], d[1], d[2], sphereColour);
+                    const auto a = vertexAt(latitude0, longitude0);
+                    const auto b = vertexAt(latitude1, longitude0);
+                    const auto c = vertexAt(latitude1, longitude1);
+                    const auto d = vertexAt(latitude0, longitude1);
+
+                    appendVertex(sourceVertices_, a[0], a[1], a[2], trajectory.colour);
+                    appendVertex(sourceVertices_, b[0], b[1], b[2], trajectory.colour);
+                    appendVertex(sourceVertices_, c[0], c[1], c[2], trajectory.colour);
+
+                    appendVertex(sourceVertices_, a[0], a[1], a[2], trajectory.colour);
+                    appendVertex(sourceVertices_, c[0], c[1], c[2], trajectory.colour);
+                    appendVertex(sourceVertices_, d[0], d[1], d[2], trajectory.colour);
+                }
             }
         }
 
@@ -428,9 +439,9 @@ namespace rp::uicore
             gridGeometryDirty_ = false;
         }
 
-        // The trajectory line and source sphere follow the active gesture and
-        // playhead: rebuilt and re-uploaded here, on the GL thread, whenever
-        // setTrajectory/setSourcePosition changed them since the last frame.
+        // The trajectory lines and source spheres follow the sounding gestures
+        // and their playheads: rebuilt and re-uploaded here, on the GL thread,
+        // whenever setTrajectories changed them since the last frame.
         if (sceneGeometryDirty_)
         {
             buildTrajectoryGeometry();
@@ -503,7 +514,7 @@ namespace rp::uicore
 
         drawBuffer(gridBuffer_, GL_LINES, gridVertexCount_);
         drawBuffer(modelBuffer_, GL_TRIANGLES, modelVertexCount_);
-        drawBuffer(trajectoryBuffer_, GL_LINE_STRIP, trajectoryVertexCount_);
+        drawBuffer(trajectoryBuffer_, GL_LINES, trajectoryVertexCount_);
         drawBuffer(sourceBuffer_, GL_TRIANGLES, sourceVertexCount_);
     }
 
@@ -604,15 +615,9 @@ namespace rp::uicore
         openGLContext_.triggerRepaint();
     }
 
-    void OpenGLView::setTrajectory(std::vector<juce::Vector3D<float>> points)
+    void OpenGLView::setTrajectories(std::vector<Trajectory> trajectories)
     {
-        trajectoryPoints_ = std::move(points);
-        markSceneDirty();
-    }
-
-    void OpenGLView::setSourcePosition(juce::Vector3D<float> position)
-    {
-        sourcePosition_ = position;
+        trajectories_ = std::move(trajectories);
         markSceneDirty();
     }
 
