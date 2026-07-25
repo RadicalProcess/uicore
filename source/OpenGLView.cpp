@@ -26,6 +26,10 @@ namespace rp::uicore
         constexpr float maxRoomSize = 30.0f;
         constexpr float defaultRoomSize = 12.0f;
 
+        constexpr float sourceSphereRadius = 0.15f;
+        constexpr int sourceSphereLatitudeSteps = 8;
+        constexpr int sourceSphereLongitudeSteps = 12;
+
         using Mat4 = std::array<float, 16>;
 
         float degreesToRadians(float degrees)
@@ -102,12 +106,17 @@ namespace rp::uicore
     OpenGLView::OpenGLView()
     : modelBuffer_(0)
     , gridBuffer_(0)
+    , trajectoryBuffer_(0)
+    , sourceBuffer_(0)
     , modelVertexCount_(0)
     , gridVertexCount_(0)
+    , trajectoryVertexCount_(0)
+    , sourceVertexCount_(0)
     , roomWidth_(defaultRoomSize)
     , roomHeight_(defaultRoomSize)
     , roomDepth_(defaultRoomSize)
     , gridGeometryDirty_(false)
+    , sceneGeometryDirty_(false)
     , cameraAzimuth_(degreesToRadians(35.0f))
     , cameraElevation_(degreesToRadians(20.0f))
     , cameraDistance_(8.0f)
@@ -270,9 +279,68 @@ namespace rp::uicore
         gridVertexCount_ = static_cast<int>(gridVertices_.size()) / 6;
     }
 
+    void OpenGLView::buildTrajectoryGeometry()
+    {
+        trajectoryVertices_.clear();
+
+        const auto lineColour = styles::highlight;
+
+        for (const auto& point : trajectoryPoints_)
+            appendVertex(trajectoryVertices_, point.x, point.y, point.z, lineColour);
+
+        trajectoryVertexCount_ = static_cast<int>(trajectoryVertices_.size()) / 6;
+    }
+
+    void OpenGLView::buildSourceGeometry()
+    {
+        sourceVertices_.clear();
+
+        // A small UV sphere marking the source position, drawn as filled
+        // triangles so it reads clearly against the wireframe grid.
+        const auto sphereColour = styles::highlight;
+
+        const auto vertexAt = [&sourcePosition = sourcePosition_](float latitude, float longitude)
+        {
+            return std::array<float, 3>{
+                sourcePosition.x + sourceSphereRadius * std::cos(latitude) * std::sin(longitude),
+                sourcePosition.y + sourceSphereRadius * std::sin(latitude),
+                sourcePosition.z + sourceSphereRadius * std::cos(latitude) * std::cos(longitude)
+            };
+        };
+
+        for (auto latStep = 0; latStep < sourceSphereLatitudeSteps; ++latStep)
+        {
+            const auto latitude0 = -pi / 2.0f + pi * static_cast<float>(latStep) / sourceSphereLatitudeSteps;
+            const auto latitude1 = -pi / 2.0f + pi * static_cast<float>(latStep + 1) / sourceSphereLatitudeSteps;
+
+            for (auto lonStep = 0; lonStep < sourceSphereLongitudeSteps; ++lonStep)
+            {
+                const auto longitude0 = 2.0f * pi * static_cast<float>(lonStep) / sourceSphereLongitudeSteps;
+                const auto longitude1 = 2.0f * pi * static_cast<float>(lonStep + 1) / sourceSphereLongitudeSteps;
+
+                const auto a = vertexAt(latitude0, longitude0);
+                const auto b = vertexAt(latitude1, longitude0);
+                const auto c = vertexAt(latitude1, longitude1);
+                const auto d = vertexAt(latitude0, longitude1);
+
+                appendVertex(sourceVertices_, a[0], a[1], a[2], sphereColour);
+                appendVertex(sourceVertices_, b[0], b[1], b[2], sphereColour);
+                appendVertex(sourceVertices_, c[0], c[1], c[2], sphereColour);
+
+                appendVertex(sourceVertices_, a[0], a[1], a[2], sphereColour);
+                appendVertex(sourceVertices_, c[0], c[1], c[2], sphereColour);
+                appendVertex(sourceVertices_, d[0], d[1], d[2], sphereColour);
+            }
+        }
+
+        sourceVertexCount_ = static_cast<int>(sourceVertices_.size()) / 6;
+    }
+
     void OpenGLView::newOpenGLContextCreated()
     {
         buildGeometry();
+        buildTrajectoryGeometry();
+        buildSourceGeometry();
 
         auto newShader = std::make_unique<juce::OpenGLShaderProgram>(openGLContext_);
 
@@ -323,6 +391,20 @@ namespace rp::uicore
                      static_cast<GLsizeiptr>(gridVertices_.size() * sizeof(float)),
                      gridVertices_.data(),
                      GL_STATIC_DRAW);
+
+        glGenBuffers(1, &trajectoryBuffer_);
+        glBindBuffer(GL_ARRAY_BUFFER, trajectoryBuffer_);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(trajectoryVertices_.size() * sizeof(float)),
+                     trajectoryVertices_.data(),
+                     GL_STATIC_DRAW);
+
+        glGenBuffers(1, &sourceBuffer_);
+        glBindBuffer(GL_ARRAY_BUFFER, sourceBuffer_);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(sourceVertices_.size() * sizeof(float)),
+                     sourceVertices_.data(),
+                     GL_STATIC_DRAW);
     }
 
     void OpenGLView::renderOpenGL()
@@ -344,6 +426,27 @@ namespace rp::uicore
                          gridVertices_.data(),
                          GL_STATIC_DRAW);
             gridGeometryDirty_ = false;
+        }
+
+        // The trajectory line and source sphere follow the active gesture and
+        // playhead: rebuilt and re-uploaded here, on the GL thread, whenever
+        // setTrajectory/setSourcePosition changed them since the last frame.
+        if (sceneGeometryDirty_)
+        {
+            buildTrajectoryGeometry();
+            glBindBuffer(GL_ARRAY_BUFFER, trajectoryBuffer_);
+            glBufferData(GL_ARRAY_BUFFER,
+                         static_cast<GLsizeiptr>(trajectoryVertices_.size() * sizeof(float)),
+                         trajectoryVertices_.data(),
+                         GL_STATIC_DRAW);
+
+            buildSourceGeometry();
+            glBindBuffer(GL_ARRAY_BUFFER, sourceBuffer_);
+            glBufferData(GL_ARRAY_BUFFER,
+                         static_cast<GLsizeiptr>(sourceVertices_.size() * sizeof(float)),
+                         sourceVertices_.data(),
+                         GL_STATIC_DRAW);
+            sceneGeometryDirty_ = false;
         }
 
         glEnable(GL_DEPTH_TEST);
@@ -400,6 +503,8 @@ namespace rp::uicore
 
         drawBuffer(gridBuffer_, GL_LINES, gridVertexCount_);
         drawBuffer(modelBuffer_, GL_TRIANGLES, modelVertexCount_);
+        drawBuffer(trajectoryBuffer_, GL_LINE_STRIP, trajectoryVertexCount_);
+        drawBuffer(sourceBuffer_, GL_TRIANGLES, sourceVertexCount_);
     }
 
     void OpenGLView::openGLContextClosing()
@@ -408,9 +513,15 @@ namespace rp::uicore
             glDeleteBuffers(1, &modelBuffer_);
         if (gridBuffer_ != 0)
             glDeleteBuffers(1, &gridBuffer_);
+        if (trajectoryBuffer_ != 0)
+            glDeleteBuffers(1, &trajectoryBuffer_);
+        if (sourceBuffer_ != 0)
+            glDeleteBuffers(1, &sourceBuffer_);
 
         modelBuffer_ = 0;
         gridBuffer_ = 0;
+        trajectoryBuffer_ = 0;
+        sourceBuffer_ = 0;
 
         shader_.reset();
         position_.reset();
@@ -490,6 +601,24 @@ namespace rp::uicore
     void OpenGLView::markGridDirty()
     {
         gridGeometryDirty_ = true;
+        openGLContext_.triggerRepaint();
+    }
+
+    void OpenGLView::setTrajectory(std::vector<juce::Vector3D<float>> points)
+    {
+        trajectoryPoints_ = std::move(points);
+        markSceneDirty();
+    }
+
+    void OpenGLView::setSourcePosition(juce::Vector3D<float> position)
+    {
+        sourcePosition_ = position;
+        markSceneDirty();
+    }
+
+    void OpenGLView::markSceneDirty()
+    {
+        sceneGeometryDirty_ = true;
         openGLContext_.triggerRepaint();
     }
 
