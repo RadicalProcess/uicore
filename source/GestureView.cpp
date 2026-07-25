@@ -17,6 +17,10 @@ namespace rp::uicore
         constexpr int kColorStripMargin = 4;
         constexpr int kContentLeft = kColorStripWidth + kColorStripMargin;
 
+        // Trajectory thumbnail size and the inset it keeps from the right edge.
+        constexpr int kThumbnailSize = 60;
+        constexpr int kThumbnailMargin = 10;
+
         juce::String keyName(int midiNote)
         {
             static const char* const names[] =
@@ -335,6 +339,7 @@ namespace rp::uicore
         selectButton_.setBounds(kContentLeft + 5, 50, 100, 20);
         dropHintLabel_.setBounds(kContentLeft + 110, 50, 105, 20);
 
-        thumbnail_.setBounds(kContentLeft + 220, 10, 60, 60);
+        thumbnail_.setBounds(getWidth() - kThumbnailSize - kThumbnailMargin, kThumbnailMargin,
+                             kThumbnailSize, kThumbnailSize);
     }
 }
