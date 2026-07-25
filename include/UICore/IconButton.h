@@ -97,4 +97,39 @@ namespace rp::uicore
     public:
         MinusButton();
     };
+
+    // Rounded-square momentary button showing the settings glyph.
+    class SettingsButton : public IconButton
+    {
+    public:
+        SettingsButton();
+    };
+
+    // Rounded-square momentary button showing the chart-line glyph.
+    class CurveButton : public IconButton
+    {
+    public:
+        CurveButton();
+    };
+
+    // Rounded-square momentary button showing the scissors glyph.
+    class TrimButton : public IconButton
+    {
+    public:
+        TrimButton();
+    };
+
+    // Rounded-square momentary button showing the wave glyph.
+    class WaveformButton : public IconButton
+    {
+    public:
+        WaveformButton();
+    };
+
+    // Rounded-square momentary button showing the width glyph.
+    class WidthButton : public IconButton
+    {
+    public:
+        WidthButton();
+    };
 }
