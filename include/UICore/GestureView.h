@@ -57,6 +57,10 @@ namespace rp::uicore
         // Set the colour of the left-edge swatch. onColorChanged is not fired.
         void setColor(juce::Colour colour);
 
+        // Show a short status word next to the gesture name, drawn in the given
+        // colour. An empty text hides the badge.
+        void setStatusBadge(const juce::String &text, juce::Colour colour);
+
         // Called after a valid soundfile is dropped, with the dropped file. The
         // view has already updated its own label by this point.
         std::function<void(const juce::File &file)> onSoundfileDropped;
@@ -88,6 +92,10 @@ namespace rp::uicore
         // The left-edge colour swatch's bounds within this row.
         juce::Rectangle<int> colorStripBounds() const;
 
+        // The status badge's bounds: the band between the name label and the
+        // trajectory thumbnail.
+        juce::Rectangle<int> statusBadgeBounds() const;
+
         // Open the colour palette popup anchored on the swatch.
         void openColorPalette();
 
@@ -115,6 +123,10 @@ namespace rp::uicore
 
         // Colour drawn in the left-edge swatch; picked from the palette popup.
         juce::Colour currentColour_;
+
+        // Status badge text and colour; an empty text draws no badge.
+        juce::String statusBadgeText_;
+        juce::Colour statusBadgeColour_;
 
         // Selects the key that triggers the gesture; populated with every MIDI
         // note.

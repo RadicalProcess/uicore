@@ -21,6 +21,14 @@ namespace rp::uicore
         constexpr int kThumbnailSize = 60;
         constexpr int kThumbnailMargin = 10;
 
+        // Status badge geometry: it shares the name label's line and fills what
+        // is left between that label and the thumbnail.
+        constexpr int kBadgeLeft = 200;
+        constexpr int kBadgeTop = 9;
+        constexpr int kBadgeHeight = 22;
+        constexpr int kBadgeRightMargin = 6;
+        constexpr float kBadgeFontHeight = 11.0f;
+
         juce::String keyName(int midiNote)
         {
             static const char* const names[] =
@@ -112,6 +120,15 @@ namespace rp::uicore
         g.setColour(currentColour_);
         g.fillRoundedRectangle(colorStripBounds().toFloat(), 3.0f);
 
+        if (statusBadgeText_.isNotEmpty())
+        {
+            const auto badge = statusBadgeBounds();
+            g.setColour(statusBadgeColour_);
+            g.drawRoundedRectangle(badge.toFloat(), 3.0f, 1.0f);
+            g.setFont(juce::Font(kBadgeFontHeight));
+            g.drawText(statusBadgeText_, badge, juce::Justification::centred, false);
+        }
+
         if (selected_)
         {
             g.setColour(juce::Colours::cornflowerblue);
@@ -150,6 +167,13 @@ namespace rp::uicore
     juce::Rectangle<int> GestureView::colorStripBounds() const
     {
         return getLocalBounds().reduced(kColorStripMargin).removeFromLeft(kColorStripWidth);
+    }
+
+    juce::Rectangle<int> GestureView::statusBadgeBounds() const
+    {
+        const auto left = kContentLeft + kBadgeLeft;
+        const auto right = getWidth() - kThumbnailSize - kThumbnailMargin - kBadgeRightMargin;
+        return juce::Rectangle<int>(left, kBadgeTop, juce::jmax(0, right - left), kBadgeHeight);
     }
 
     void GestureView::openColorPalette()
@@ -257,6 +281,16 @@ namespace rp::uicore
             return;
 
         currentColour_ = colour;
+        repaint();
+    }
+
+    void GestureView::setStatusBadge(const juce::String &text, juce::Colour colour)
+    {
+        if (statusBadgeText_ == text && statusBadgeColour_ == colour)
+            return;
+
+        statusBadgeText_ = text;
+        statusBadgeColour_ = colour;
         repaint();
     }
 
