@@ -26,6 +26,9 @@ namespace rp::uicore
         constexpr float maxRoomSize = 30.0f;
         constexpr float defaultRoomSize = 12.0f;
 
+        // Width of an average human head, in metres.
+        constexpr float headWidth = 0.15f;
+
         constexpr float sourceSphereRadius = 0.15f;
         constexpr int sourceSphereLatitudeSteps = 8;
         constexpr int sourceSphereLongitudeSteps = 12;
@@ -148,12 +151,14 @@ namespace rp::uicore
                                                                 BinaryData::dummyhead_objSize));
 
         const auto centre = model.getCentre();
-        const auto maxExtent = model.getMaxExtent();
+        const auto minBounds = model.getMinBounds();
+        const auto maxBounds = model.getMaxBounds();
 
-        // Target size of the model's largest dimension in world units, chosen so
-        // the head is roughly as tall as the reference cube used to be.
-        const auto targetSize = 2.2f;
-        const auto scale = (maxExtent > 0.0f) ? targetSize / maxExtent : 1.0f;
+        // One world unit is one metre, so the head is scaled from its own width
+        // (the x axis) to that of an average human head. The remaining two axes
+        // follow from the model's proportions.
+        const auto modelWidth = maxBounds[0] - minBounds[0];
+        const auto scale = (modelWidth > 0.0f) ? headWidth / modelWidth : 1.0f;
 
         const auto transform = [centre, scale](const ObjModel::Position& p)
         {
