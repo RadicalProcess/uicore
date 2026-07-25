@@ -87,7 +87,6 @@ namespace rp::uicore
         points_ = sorted;
         draggedIndex_ = -1;
 
-        notifyChange();
         repaint();
     }
 
@@ -96,7 +95,6 @@ namespace rp::uicore
         points_ = { juce::Point<float>(0.0f, 0.0f), juce::Point<float>(1.0f, 1.0f) };
         draggedIndex_ = -1;
 
-        notifyChange();
         repaint();
     }
 
@@ -200,13 +198,14 @@ namespace rp::uicore
         const auto index = nodeAt(position);
 
         // Shift-click removes an interior node; the pinned endpoints are left
-        // untouched.
+        // untouched. A removal is complete the moment it happens, so it is the
+        // one edit reported from here rather than on mouse up.
         if (event.mods.isShiftDown())
         {
             if (index >= 0 && !isEndpoint(index))
             {
                 points_.erase(points_.begin() + index);
-                notifyChange();
+                notifyEditEnd();
                 repaint();
             }
             return;
@@ -233,7 +232,6 @@ namespace rp::uicore
         points_.insert(points_.begin() + insertAt, normalised);
         draggedIndex_ = static_cast<int>(insertAt);
 
-        notifyChange();
         repaint();
     }
 
@@ -259,7 +257,6 @@ namespace rp::uicore
             points_[draggedIndex_].y = normalised.y;
         }
 
-        notifyChange();
         repaint();
     }
 
@@ -269,6 +266,12 @@ namespace rp::uicore
             return;
 
         draggedIndex_ = -1;
+
+        // Releasing the node ends the edit: the curve the listener is told about
+        // is the one the user settled on, not every state the drag passed
+        // through. A node added by clicking empty space is reported here too,
+        // because the click starts a drag that this release ends.
+        notifyEditEnd();
         repaint();
     }
 
@@ -320,10 +323,10 @@ namespace rp::uicore
         return index == 0 || index == static_cast<int>(points_.size()) - 1;
     }
 
-    void MotionView::notifyChange() const
+    void MotionView::notifyEditEnd() const
     {
-        if (onChange)
-            onChange(points_);
+        if (onEditEnd)
+            onEditEnd(points_);
     }
 
 }

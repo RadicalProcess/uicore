@@ -58,9 +58,13 @@ namespace rp::uicore
         // empty vector removes all reference lines.
         void setReferenceLines(const std::vector<float>& linePositions);
 
-        // Invoked whenever the curve changes, either through user interaction or
-        // setPoints / reset.
-        std::function<void(const std::vector<juce::Point<float>>& points)> onChange;
+        // Invoked once when the user finishes editing the curve: on releasing a
+        // node that was dragged (including one just added by clicking empty
+        // space) and on removing a node with shift-click. It does not report the
+        // intermediate states a drag passes through, and it never reports
+        // setPoints / reset, which come from the owner and are already known to
+        // it.
+        std::function<void(const std::vector<juce::Point<float>>& points)> onEditEnd;
 
     private:
         void paint(juce::Graphics& g) override;
@@ -85,7 +89,7 @@ namespace rp::uicore
         // Endpoints are pinned and cannot be removed.
         bool isEndpoint(int index) const;
 
-        void notifyChange() const;
+        void notifyEditEnd() const;
 
         std::vector<juce::Point<float>> points_;
 
