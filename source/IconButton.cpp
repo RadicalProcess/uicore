@@ -122,4 +122,34 @@ namespace rp::uicore
     : IconButton(BinaryData::minus_svg, BinaryData::minus_svgSize)
     {
     }
+
+    SettingsButton::SettingsButton()
+    : IconButton(BinaryData::settings_svg, BinaryData::settings_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
+
+    CurveButton::CurveButton()
+    : IconButton(BinaryData::chartline_svg, BinaryData::chartline_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
+
+    TrimButton::TrimButton()
+    : IconButton(BinaryData::scissors_svg, BinaryData::scissors_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
+
+    WaveformButton::WaveformButton()
+    : IconButton(BinaryData::wave_svg, BinaryData::wave_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
+
+    WidthButton::WidthButton()
+    : IconButton(BinaryData::width_svg, BinaryData::width_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
 }

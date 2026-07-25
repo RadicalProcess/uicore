@@ -47,7 +47,11 @@ juce_add_binary_data(UIResource
         resource/icons/pencil.svg
         resource/icons/eye.svg
         resource/icons/plus.svg
-        resource/icons/minus.svg)
+        resource/icons/minus.svg
+        resource/icons/chart-line.svg
+        resource/icons/scissors.svg
+        resource/icons/wave.svg
+        resource/icons/width.svg)
 
 target_link_libraries(UICore
         PUBLIC
