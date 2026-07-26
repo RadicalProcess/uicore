@@ -45,7 +45,7 @@ namespace rp::uicore
         // Populate the row from a gesture's data.
         void setName(const juce::String &name);
         void setKey(int midiNote);
-        void setTrajectory(const std::vector<TrajectoryView::Anchor> &anchors);
+        void setTrajectory(const std::vector<TrajectoryThumbnail::Anchor> &anchors);
 
         // Show the associated soundfile's name, or pass an empty name to show
         // the select-soundfile button and drag-and-drop hint instead.

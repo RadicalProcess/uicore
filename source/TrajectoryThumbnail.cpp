@@ -15,13 +15,20 @@ namespace rp::uicore
         // inscribed square and the component edges.
         const auto curveWidth_ = 1.5f;
         const auto margin_ = 2.0f;
+
+        // Maps a point from a -1..1 axis to a pixel position spanning the given
+        // centre and half-extent.
+        float toAxisPixel(float centre, float halfExtent, float normalised)
+        {
+            return centre + normalised * halfExtent;
+        }
     }
 
     TrajectoryThumbnail::TrajectoryThumbnail()
     {
     }
 
-    void TrajectoryThumbnail::setAnchorData(const std::vector<TrajectoryView::Anchor>& anchors)
+    void TrajectoryThumbnail::setAnchorData(const std::vector<Anchor>& anchors)
     {
         anchors_ = anchors;
         repaint();
@@ -39,10 +46,30 @@ namespace rp::uicore
         const auto square = juce::Rectangle<float>(side, side).withCentre(bounds.getCentre());
 
         juce::Path path;
-        TrajectoryView::buildPath(anchors_, square, path);
+        buildPath(anchors_, square, path);
 
         g.setColour(styles::foreground);
         g.strokePath(path, juce::PathStrokeType(curveWidth_));
+    }
+
+    void TrajectoryThumbnail::buildPath(const std::vector<Anchor>& anchors,
+                                        const juce::Rectangle<float>& square,
+                                        juce::Path& path)
+    {
+        const auto toPixel = [&square](juce::Point<float> normalised)
+        {
+            return juce::Point<float>(toAxisPixel(square.getCentreX(), square.getWidth() * 0.5f, normalised.x),
+                                      toAxisPixel(square.getCentreY(), square.getHeight() * 0.5f, normalised.y));
+        };
+
+        path.startNewSubPath(toPixel(anchors.front().position));
+
+        for (auto i = static_cast<size_t>(1); i < anchors.size(); ++i)
+        {
+            const auto& previous = anchors[i - 1];
+            const auto& current = anchors[i];
+            path.cubicTo(toPixel(previous.handleOut), toPixel(current.handleIn), toPixel(current.position));
+        }
     }
 
 }
