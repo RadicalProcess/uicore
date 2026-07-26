@@ -7,6 +7,8 @@ namespace rp::uicore
     : progress_(0.0f)
     {
         setName(name);
+        setColour(trackColourId, styles::background);
+        setColour(barColourId, styles::highlight);
     }
 
     ProgressBar::~ProgressBar()
@@ -30,7 +32,7 @@ namespace rp::uicore
         const auto bounds = getLocalBounds().toFloat();
         const auto corner = bounds.getHeight() * 0.5f;
 
-        g.setColour(styles::background);
+        g.setColour(findColour(trackColourId));
         g.fillRoundedRectangle(bounds, corner);
 
         if (progress_ <= 0.0)
@@ -39,7 +41,7 @@ namespace rp::uicore
         }
 
         const auto filledWidth = bounds.getWidth() * progress_;
-        g.setColour(styles::highlight);
+        g.setColour(findColour(barColourId));
         g.fillRoundedRectangle(bounds.withWidth(filledWidth), corner);
     }
 }
