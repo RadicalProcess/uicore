@@ -13,11 +13,15 @@ namespace rp::uicore
     //
     // On top of the standard component it adds four things:
     //   * per-key fill colours (setColor / clearColor / clearColors),
-    //   * an octave label under every A key (A0, A1, A2, ...),
+    //   * an octave label under every C key (C0, C1, C2, ...),
     //   * a single "selected" key that is drawn with an outline (setSelection),
     //   * a "playing" overlay wash on any number of keys (setPlaying), layered
     //     on top of the fill colour and independent of it, so callers driving
     //     transient playback feedback never disturb the persistent fill colour.
+    //
+    // The keys are drawn flat: a black note is a plain filled rectangle with
+    // none of juce::MidiKeyboardComponent's bevel highlight, so the keyboard
+    // sits in a flat-design host without a raised, three-dimensional look.
     //
     // The keyboard shares a juce::MidiKeyboardState with the host, following the
     // usual JUCE idiom; the state must outlive the view.
@@ -27,12 +31,21 @@ namespace rp::uicore
     class Keyboard : public juce::MidiKeyboardComponent
     {
     public:
+        // The selection outline and the playing wash on top of the ColourIds
+        // juce::MidiKeyboardComponent already defines for the keys themselves.
+        enum ColourIds
+        {
+            selectionColourId = 0x2003000,
+            playingOverlayColourId = 0x2003001
+        };
+
         explicit Keyboard(juce::MidiKeyboardState& state,
                           Orientation orientation = Orientation::horizontalKeyboard);
 
-        // Sets a custom fill colour for a single key. The colour is used as the
-        // key's base colour; the usual mouse-over / key-down overlays are still
-        // drawn on top of it.
+        // Sets a custom fill colour for a single key. The colour is composited
+        // over the key's own base colour, so a translucent colour tints a white
+        // and a black key alike; the usual mouse-over / key-down overlays are
+        // still drawn on top of it.
         void setColor(int midiNoteNumber, juce::Colour colour);
 
         // Removes the custom colour of a single key, reverting it to the default.
@@ -63,6 +76,11 @@ namespace rp::uicore
         juce::String getWhiteNoteText(int midiNoteNumber) override;
 
     private:
+        // Fills a key's area with its base colour, tinted by the custom colour
+        // set for that key, if any.
+        void fillKey(juce::Graphics& g, const juce::Rectangle<float>& area, int midiNoteNumber,
+                     juce::Colour baseColour) const;
+
         // Draws the selection outline inside a key's area.
         void drawSelectionOutline(juce::Graphics& g, const juce::Rectangle<float>& area) const;
 
