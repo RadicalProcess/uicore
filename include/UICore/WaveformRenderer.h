@@ -16,9 +16,9 @@ namespace rp::uicore
     //
     // The renderer owns the waveform data and playhead state but paints neither
     // a background nor a border, so it can serve both as the body of the
-    // Waveform component and as a translucent backdrop behind the MotionView
-    // curve. Callers pass the colours, so a low-alpha colour yields a faint
-    // rendering.
+    // Waveform component and as a translucent backdrop behind a curve drawn by
+    // another component. Callers pass the colours, so a low-alpha colour yields
+    // a faint rendering.
     class WaveformRenderer
     {
     public:
