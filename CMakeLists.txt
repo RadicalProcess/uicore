@@ -9,8 +9,6 @@ add_library(UICore
         source/MotionView.cpp
         source/GestureView.cpp
         source/ColorPalette.cpp
-        source/TrajectoryView.cpp
-        source/NodeLabel.cpp
         source/TrajectoryThumbnail.cpp
         source/OpenGLView.cpp
         source/ObjModel.cpp
