@@ -4,7 +4,10 @@
 
 namespace rp::uicore
 {
-    // A round button that renders a white SVG glyph on a coloured disc.
+    // A button that renders an SVG glyph on an outlined plate: the plate is
+    // filled, bordered and the glyph tinted, all six colours coming from the
+    // button's ColourIds so a host can restyle a single button or all of them.
+    // A pressed or toggled button uses the selected colours.
     //
     // Construct with a single icon for a momentary button, or with an off/on
     // pair for a toggle button whose glyph swaps with the toggle state. Both
@@ -13,11 +16,21 @@ namespace rp::uicore
     class IconButton : public juce::Button
     {
     public:
-        // The shape of the coloured disc/plate the glyph sits on.
+        // The shape of the plate the glyph sits on.
         enum class Shape
         {
             Circle,
             RoundedSquare
+        };
+
+        enum ColourIds
+        {
+            plateColourId = 0x2001000,
+            plateSelectedColourId = 0x2001001,
+            borderColourId = 0x2001002,
+            borderSelectedColourId = 0x2001003,
+            glyphColourId = 0x2001004,
+            glyphSelectedColourId = 0x2001005
         };
 
         // Momentary button showing a single icon.
@@ -34,8 +47,14 @@ namespace rp::uicore
     private:
         void paintButton(juce::Graphics& g, bool isMouseOverButton, bool isButtonDown) override;
 
+        void colourChanged() override;
+
+        void applyDefaultColours();
+
         std::unique_ptr<juce::Drawable> iconOff_;
         std::unique_ptr<juce::Drawable> iconOn_;
+        juce::Colour iconOffColour_;
+        juce::Colour iconOnColour_;
         Shape shape_ = Shape::Circle;
     };
 
