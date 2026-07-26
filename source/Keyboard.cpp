@@ -13,11 +13,8 @@ namespace rp::uicore
         // Middle C = C4 so that A0 (MIDI 21) is labelled "A0".
         constexpr int kOctaveForMiddleC = 4;
 
-        // Semitone offset of the A notes within an octave (C == 0).
-        constexpr int kNoteA = 9;
-
-        const juce::Colour kSelectionColour = juce::Colours::red;
-        const juce::Colour kPlayingOverlayColour = styles::playing.withAlpha(0.55f);
+        // Semitone offset of the C notes within an octave (C == 0).
+        constexpr int kNoteC = 0;
     }
 
     Keyboard::Keyboard(juce::MidiKeyboardState& state, Orientation orientation)
@@ -25,6 +22,8 @@ namespace rp::uicore
     {
         setAvailableRange(kFirstKey, kLastKey);
         setOctaveForMiddleC(kOctaveForMiddleC);
+        setColour(selectionColourId, juce::Colours::red);
+        setColour(playingOverlayColourId, styles::playing.withAlpha(0.55f));
         // Scrolling stays enabled (so setLowestVisibleKey is honoured and callers
         // can drive it from an external scroll bar), but the built-in octave
         // scroll buttons are hidden in resized(). Calling setScrollButtonsVisible
@@ -90,14 +89,10 @@ namespace rp::uicore
     void Keyboard::drawWhiteNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
                                  bool isDown, bool isOver, juce::Colour lineColour, juce::Colour textColour)
     {
-        // The base implementation only overlays the down / over states on top of
-        // the component background, so filling the custom colour first lets it
-        // show through as the key's base colour.
-        if (const auto* colour = findColor(midiNoteNumber))
-        {
-            g.setColour(*colour);
-            g.fillRect(area);
-        }
+        // The base implementation paints the white keys as one background fill
+        // and only overlays the down / over states per key, so the key's own
+        // colour has to be laid down here for a custom colour to tint it.
+        fillKey(g, area, midiNoteNumber, findColour(whiteNoteColourId));
 
         juce::MidiKeyboardComponent::drawWhiteNote(midiNoteNumber, g, area, isDown, isOver, lineColour, textColour);
 
@@ -110,10 +105,20 @@ namespace rp::uicore
     void Keyboard::drawBlackNote(int midiNoteNumber, juce::Graphics& g, juce::Rectangle<float> area,
                                  bool isDown, bool isOver, juce::Colour noteFillColour)
     {
-        const auto* colour = findColor(midiNoteNumber);
-        const auto fillColour = colour != nullptr ? *colour : noteFillColour;
+        // Deliberately not the base implementation: that one draws a brighter
+        // inset band over the key to fake a bevel, which reads as raised. A
+        // black key here is one flat rectangle, with the same down / over
+        // overlays the white keys get.
+        fillKey(g, area, midiNoteNumber, noteFillColour);
 
-        juce::MidiKeyboardComponent::drawBlackNote(midiNoteNumber, g, area, isDown, isOver, fillColour);
+        auto overlay = juce::Colours::transparentBlack;
+        if (isDown)
+            overlay = findColour(keyDownOverlayColourId);
+        if (isOver)
+            overlay = overlay.overlaidWith(findColour(mouseOverKeyOverlayColourId));
+
+        g.setColour(overlay);
+        g.fillRect(area);
 
         if (midiNoteNumber == selectedNote_)
             drawSelectionOutline(g, area);
@@ -123,16 +128,24 @@ namespace rp::uicore
 
     juce::String Keyboard::getWhiteNoteText(int midiNoteNumber)
     {
-        if (midiNoteNumber % 12 == kNoteA)
+        if (midiNoteNumber % 12 == kNoteC)
             return juce::MidiMessage::getMidiNoteName(midiNoteNumber, true, true, getOctaveForMiddleC());
 
         return {};
     }
 
+    void Keyboard::fillKey(juce::Graphics& g, const juce::Rectangle<float>& area, int midiNoteNumber,
+                           juce::Colour baseColour) const
+    {
+        const auto* colour = findColor(midiNoteNumber);
+        g.setColour(colour != nullptr ? baseColour.overlaidWith(*colour) : baseColour);
+        g.fillRect(area);
+    }
+
     void Keyboard::drawSelectionOutline(juce::Graphics& g, const juce::Rectangle<float>& area) const
     {
         const auto outline = area.reduced(1.0f);
-        g.setColour(kSelectionColour);
+        g.setColour(findColour(selectionColourId));
         g.drawRect(outline, 2.0f);
     }
 
@@ -141,7 +154,7 @@ namespace rp::uicore
         if (playingNotes_.find(midiNoteNumber) == playingNotes_.end())
             return;
 
-        g.setColour(kPlayingOverlayColour);
+        g.setColour(findColour(playingOverlayColourId));
         g.fillRect(area);
     }
 

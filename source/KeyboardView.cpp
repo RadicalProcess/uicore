@@ -34,7 +34,6 @@ namespace rp::uicore
         scrollBar_.setRangeLimits(kFirstMidiNote, kLastMidiNote + 1);
         scrollBar_.setCurrentRange(kLowestVisibleNote, visibleSpan, juce::dontSendNotification);
         scrollBar_.setAutoHide(false);
-        scrollBar_.setColour(juce::ScrollBar::thumbColourId, styles::highlight);
         scrollBar_.addListener(this);
         addAndMakeVisible(scrollBar_);
     }
@@ -52,6 +51,11 @@ namespace rp::uicore
     const Keyboard& KeyboardView::keyboard() const noexcept
     {
         return keys_;
+    }
+
+    juce::ScrollBar& KeyboardView::scrollBar() noexcept
+    {
+        return scrollBar_;
     }
 
     void KeyboardView::resized()

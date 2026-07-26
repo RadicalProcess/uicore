@@ -29,6 +29,10 @@ namespace rp::uicore
         Keyboard& keyboard() noexcept;
         const Keyboard& keyboard() const noexcept;
 
+        // The scroll bar under the keys, so a host can restyle it through the
+        // usual juce::ScrollBar ColourIds.
+        juce::ScrollBar& scrollBar() noexcept;
+
         void resized() override;
 
     private:
