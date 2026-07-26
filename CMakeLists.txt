@@ -9,7 +9,6 @@ add_library(UICore
         source/GestureView.cpp
         source/ColorPalette.cpp
         source/TrajectoryThumbnail.cpp
-        source/OpenGLView.cpp
         source/ObjModel.cpp
         source/ImageToggleButton.cpp
         source/IconButton.cpp
