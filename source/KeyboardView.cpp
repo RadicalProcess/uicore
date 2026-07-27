@@ -7,32 +7,37 @@ namespace rp::uicore
 
     namespace
     {
-        // Visible window: four octaves from A3 (MIDI 57) to A7 (MIDI 105).
-        constexpr int kLowestVisibleNote = 57;
-        constexpr int kHighestVisibleNote = 105;
+        // Visible window: four octaves, starting at C2 (MIDI 36).
+        constexpr int kLowestVisibleNote = 36;
+        constexpr int kVisibleNotes = 48;
 
-        // White keys spanning A3..A7 inclusive; drives the key width so exactly the
-        // four-octave window fits the keyboard's width.
-        constexpr int kVisibleWhiteKeys = 29;
+        // Any four-octave window holds exactly four times the seven white keys of
+        // an octave; this drives the key width so the window fits the width.
+        constexpr int kVisibleWhiteKeys = 28;
 
         // The keyboard can be scrolled across the whole MIDI range.
         constexpr int kFirstMidiNote = 0;
         constexpr int kLastMidiNote = 127;
 
         constexpr int kScrollBarHeight = 16;
+
+        int clampedLowestNote(int midiNoteNumber)
+        {
+            return juce::jlimit(kFirstMidiNote, kLastMidiNote - kVisibleNotes + 1, midiNoteNumber);
+        }
     }
 
     KeyboardView::KeyboardView(juce::MidiKeyboardState& state)
     : keys_(state)
+    , notifiedLowestKey_(kLowestVisibleNote)
     {
         keys_.setAvailableRange(kFirstMidiNote, kLastMidiNote);
         keys_.setLowestVisibleKey(kLowestVisibleNote);
         keys_.addChangeListener(this);
         addAndMakeVisible(keys_);
 
-        const auto visibleSpan = kHighestVisibleNote - kLowestVisibleNote + 1;
         scrollBar_.setRangeLimits(kFirstMidiNote, kLastMidiNote + 1);
-        scrollBar_.setCurrentRange(kLowestVisibleNote, visibleSpan, juce::dontSendNotification);
+        scrollBar_.setCurrentRange(kLowestVisibleNote, kVisibleNotes, juce::dontSendNotification);
         scrollBar_.setAutoHide(false);
         scrollBar_.addListener(this);
         addAndMakeVisible(scrollBar_);
@@ -58,10 +63,33 @@ namespace rp::uicore
         return scrollBar_;
     }
 
+    void KeyboardView::setScrollBarVisible(bool visible)
+    {
+        scrollBar_.setVisible(visible);
+        resized();
+    }
+
+    int KeyboardView::getLowestVisibleKey() const noexcept
+    {
+        return keys_.getLowestVisibleKey();
+    }
+
+    int KeyboardView::getHighestVisibleKey() const noexcept
+    {
+        return keys_.getLowestVisibleKey() + kVisibleNotes - 1;
+    }
+
+    void KeyboardView::setLowestVisibleKey(int midiNoteNumber)
+    {
+        keys_.setLowestVisibleKey(clampedLowestNote(midiNoteNumber));
+    }
+
     void KeyboardView::resized()
     {
         auto area = getLocalBounds();
-        scrollBar_.setBounds(area.removeFromBottom(kScrollBarHeight));
+
+        if (scrollBar_.isVisible())
+            scrollBar_.setBounds(area.removeFromBottom(kScrollBarHeight));
 
         keys_.setBounds(area);
         keys_.setKeyWidth(static_cast<float>(area.getWidth()) / static_cast<float>(kVisibleWhiteKeys));
@@ -69,11 +97,20 @@ namespace rp::uicore
 
     void KeyboardView::changeListenerCallback(juce::ChangeBroadcaster* source)
     {
-        if (source != &keys_ || ignoreScrollCallbacks_)
+        if (source != &keys_)
             return;
 
-        const juce::ScopedValueSetter<bool> guard(ignoreScrollCallbacks_, true);
-        scrollBar_.setCurrentRangeStart(keys_.getLowestVisibleKey(), juce::dontSendNotification);
+        if (!ignoreScrollCallbacks_)
+        {
+            const juce::ScopedValueSetter<bool> guard(ignoreScrollCallbacks_, true);
+            scrollBar_.setCurrentRangeStart(keys_.getLowestVisibleKey(), juce::dontSendNotification);
+        }
+
+        if (keys_.getLowestVisibleKey() == notifiedLowestKey_)
+            return;
+
+        notifiedLowestKey_ = keys_.getLowestVisibleKey();
+        sendChangeMessage();
     }
 
     void KeyboardView::scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart)
@@ -82,7 +119,7 @@ namespace rp::uicore
             return;
 
         const juce::ScopedValueSetter<bool> guard(ignoreScrollCallbacks_, true);
-        keys_.setLowestVisibleKey(juce::roundToInt(newRangeStart));
+        keys_.setLowestVisibleKey(clampedLowestNote(juce::roundToInt(newRangeStart)));
     }
 
 }
