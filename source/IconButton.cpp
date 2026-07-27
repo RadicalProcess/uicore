@@ -13,7 +13,7 @@ namespace rp::uicore
         constexpr float kCornerFactor = 0.2f;
 
         // Margin around the glyph, as a fraction of the plate's size.
-        constexpr float kGlyphMargin = 0.28f;
+        constexpr float kGlyphMargin = 0.22f;
 
         // Opacity of a disabled button.
         constexpr float kDisabledOpacity = 0.4f;
