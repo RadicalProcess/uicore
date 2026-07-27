@@ -10,6 +10,8 @@ namespace rp::uicore
     , orientation_(orientation)
     {
         setName(name);
+        setColour(trackColourId, styles::background);
+        setColour(levelColourId, styles::highlight);
     }
 
     LevelIndicator::~LevelIndicator()
@@ -33,7 +35,7 @@ namespace rp::uicore
         const auto bounds = getLocalBounds().toFloat();
         const auto corner = std::min(bounds.getWidth(), bounds.getHeight()) * 0.5f;
 
-        g.setColour(styles::background);
+        g.setColour(findColour(trackColourId));
         g.fillRoundedRectangle(bounds, corner);
 
         if (level_ <= 0.0f)
@@ -41,7 +43,7 @@ namespace rp::uicore
             return;
         }
 
-        g.setColour(styles::highlight);
+        g.setColour(findColour(levelColourId));
 
         if (orientation_ == Orientation::Horizontal)
         {

@@ -8,10 +8,17 @@ namespace rp::uicore
 {
     // A mono level meter that fills in proportion to a normalised level in the
     // range [0, 1]. Horizontal meters fill from the left edge; vertical meters
-    // fill from the bottom edge upwards.
+    // fill from the bottom edge upwards. The track and level colours come from
+    // the meter's ColourIds so a host can restyle a single meter or all of them.
     class LevelIndicator : public juce::Component
     {
     public:
+        enum ColourIds
+        {
+            trackColourId = 0x2004000,
+            levelColourId = 0x2004001
+        };
+
         enum class Orientation
         {
             Horizontal,

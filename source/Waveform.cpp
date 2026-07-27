@@ -25,6 +25,12 @@ namespace rp::uicore
         // Horizontal slack (in pixels) added either side of a handle when hit
         // testing, so the small triangles are comfortable to grab.
         const auto fadeHandleHitMargin_ = 4.0f;
+
+        // Colours the component falls back to when a host sets none of its
+        // ColourIds.
+        const auto defaultBackground_ = juce::Colour(30, 30, 30);
+        const auto defaultOutline_ = juce::Colour(60, 60, 60);
+        const auto defaultPlaceholderText_ = juce::Colour(120, 120, 120);
     }
 
     Waveform::Waveform()
@@ -38,28 +44,35 @@ namespace rp::uicore
     , activeFadeHandle_(FadeHandle::None)
     {
         setOpaque(true);
+        setColour(backgroundColourId, defaultBackground_);
+        setColour(outlineColourId, defaultOutline_);
+        setColour(traceColourId, styles::foreground);
+        setColour(playheadColourId, styles::highlight);
+        setColour(selectionColourId, styles::highlight);
+        setColour(fadeColourId, styles::highlight);
+        setColour(placeholderTextColourId, defaultPlaceholderText_);
     }
 
     void Waveform::paint(juce::Graphics& g)
     {
-        g.fillAll(juce::Colour(30, 30, 30));
+        g.fillAll(findColour(backgroundColourId));
 
-        g.setColour(juce::Colour(60, 60, 60));
+        g.setColour(findColour(outlineColourId));
         g.drawRect(getLocalBounds(), 1);
 
         if (!renderer_.isEmpty())
         {
             const auto bounds = getLocalBounds().toFloat();
-            renderer_.paintWaveform(g, bounds, styles::foreground);
+            renderer_.paintWaveform(g, bounds, findColour(traceColourId));
             if (hasSelection_)
                 paintSelection(g);
             if (fadeHandlesVisible())
                 paintFades(g);
-            renderer_.paintPlayhead(g, bounds, styles::highlight);
+            renderer_.paintPlayhead(g, bounds, findColour(playheadColourId));
         }
         else
         {
-            g.setColour(juce::Colour(120, 120, 120));
+            g.setColour(findColour(placeholderTextColourId));
             g.setFont(juce::FontOptions(14.0f));
             g.drawText("No audio file selected", getLocalBounds(), juce::Justification::centred);
         }
@@ -307,10 +320,12 @@ namespace rp::uicore
 
         const auto selectionBounds = juce::Rectangle<float>(startX, bounds.getY(), endX - startX, bounds.getHeight());
 
-        g.setColour(styles::highlight.withAlpha(selectionAlpha_));
+        const auto selectionColour = findColour(selectionColourId);
+
+        g.setColour(selectionColour.withAlpha(selectionAlpha_));
         g.fillRect(selectionBounds);
 
-        g.setColour(styles::highlight);
+        g.setColour(selectionColour);
         g.drawLine(startX, bounds.getY(), startX, bounds.getBottom(), 1.0f);
         g.drawLine(endX, bounds.getY(), endX, bounds.getBottom(), 1.0f);
     }
@@ -326,7 +341,7 @@ namespace rp::uicore
         if (width <= 0.0f)
             return;
 
-        const auto fadeColour = styles::highlight;
+        const auto fadeColour = findColour(fadeColourId);
 
         // The slope rises from silence (bottom) at the selection edge to full
         // gain (top) where the fade ends; the triangle it cuts off is shaded to
