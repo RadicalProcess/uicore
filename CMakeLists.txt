@@ -38,6 +38,7 @@ juce_add_binary_data(UIResource
         resource/icons/room.svg
         resource/icons/settings.svg
         resource/icons/trash.svg
+        resource/icons/copy.svg
         resource/icons/pencil.svg
         resource/icons/eye.svg
         resource/icons/plus.svg

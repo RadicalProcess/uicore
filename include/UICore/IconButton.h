@@ -82,6 +82,13 @@ namespace rp::uicore
         TrashButton();
     };
 
+    // Rounded-square momentary button showing the copy glyph.
+    class CopyButton : public IconButton
+    {
+    public:
+        CopyButton();
+    };
+
     // Rounded-square momentary button showing the room glyph.
     class RoomButton : public IconButton
     {
