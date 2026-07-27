@@ -12,14 +12,27 @@ namespace rp::uicore
 
     // Displays a (potentially very long) sample. In addition to a playhead, the
     // user can select a region by clicking and dragging; the selected region is
-    // highlighted with a translucent orange overlay and reported back as a pair
-    // of normalised ratios (0..1) so a caller can show that slice in another
+    // highlighted with a translucent overlay and reported back as a pair of
+    // normalised ratios (0..1) so a caller can show that slice in another
     // editor view. Selection is opt-in via setSelectionEnabled. The selection
     // can additionally carry a fade-in and fade-out, edited via draggable
-    // triangle handles and opt-in through setFadeEnabled.
+    // triangle handles and opt-in through setFadeEnabled. Every colour it
+    // paints with comes from its ColourIds so a host can restyle a single
+    // waveform or all of them.
     class Waveform : public juce::Component
     {
     public:
+        enum ColourIds
+        {
+            backgroundColourId = 0x2005000,
+            outlineColourId = 0x2005001,
+            traceColourId = 0x2005002,
+            playheadColourId = 0x2005003,
+            selectionColourId = 0x2005004,
+            fadeColourId = 0x2005005,
+            placeholderTextColourId = 0x2005006
+        };
+
         Waveform();
         ~Waveform() override = default;
 
