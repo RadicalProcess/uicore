@@ -156,6 +156,12 @@ namespace rp::uicore
         setShape(Shape::RoundedSquare);
     }
 
+    CopyButton::CopyButton()
+    : IconButton(BinaryData::copy_svg, BinaryData::copy_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
+
     RoomButton::RoomButton()
     : IconButton(BinaryData::room_svg, BinaryData::room_svgSize)
     {
