@@ -9,7 +9,9 @@ add_library(UICore
         source/ColorPalette.cpp
         source/ObjModel.cpp
         source/ImageToggleButton.cpp
+        source/Icon.cpp
         source/IconButton.cpp
+        source/Spinner.cpp
         source/GlissonSlider/HorizontalKnob.cpp
         source/GlissonSlider/VerticalKnob.cpp
         source/GlissonSlider/Slider.cpp
@@ -46,7 +48,8 @@ juce_add_binary_data(UIResource
         resource/icons/chart-line.svg
         resource/icons/scissors.svg
         resource/icons/wave.svg
-        resource/icons/width.svg)
+        resource/icons/width.svg
+        resource/icons/loader.svg)
 
 target_link_libraries(UICore
         PUBLIC

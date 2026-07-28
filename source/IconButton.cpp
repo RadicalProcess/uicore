@@ -1,4 +1,5 @@
 #include "IconButton.h"
+#include "Icon.h"
 #include "Style.h"
 #include <BinaryData.h>
 
@@ -17,37 +18,6 @@ namespace rp::uicore
 
         // Opacity of a disabled button.
         constexpr float kDisabledOpacity = 0.4f;
-
-        // The bundled SVG icons use stroke="currentColor", which JUCE resolves
-        // to transparent black (invisible). Swap it for white before parsing so
-        // the glyph can be recoloured later.
-        std::unique_ptr<juce::Drawable> loadWhiteIcon(const void* data, size_t size)
-        {
-            const auto svg = juce::String::createStringFromData(data, static_cast<int>(size))
-                                 .replace("currentColor", "#FFFFFF");
-
-            const auto xml = juce::parseXML(svg);
-
-            if (xml == nullptr)
-            {
-                return nullptr;
-            }
-
-            return juce::Drawable::createFromSVG(*xml);
-        }
-
-        // Recolours the glyph in place, remembering what it currently is: the
-        // drawable is parsed once and only touched when the colour changes.
-        void tintIcon(juce::Drawable* icon, juce::Colour& currentColour, juce::Colour colour)
-        {
-            if (icon == nullptr || currentColour == colour)
-            {
-                return;
-            }
-
-            icon->replaceColour(currentColour, colour);
-            currentColour = colour;
-        }
     }
 
     IconButton::IconButton(const void* svgData, size_t svgDataSize)
