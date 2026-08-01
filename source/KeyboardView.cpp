@@ -28,8 +28,8 @@ namespace rp::uicore
     }
 
     KeyboardView::KeyboardView(juce::MidiKeyboardState& state)
-    : keys_(state)
-    , notifiedLowestKey_(kLowestVisibleNote)
+        : keys_(state)
+        , notifiedLowestKey_(kLowestVisibleNote)
     {
         keys_.setAvailableRange(kFirstMidiNote, kLastMidiNote);
         keys_.setLowestVisibleKey(kLowestVisibleNote);
@@ -91,8 +91,21 @@ namespace rp::uicore
         if (scrollBar_.isVisible())
             scrollBar_.setBounds(area.removeFromBottom(kScrollBarHeight));
 
-        keys_.setBounds(area);
+        if (area.getWidth() <= 0)
+        {
+            keys_.setBounds(area);
+            return;
+        }
+
+        // The keys scroll themselves back down whenever their bounds leave room
+        // for more keys than the width they are drawn at accounts for, so the key
+        // width goes in before the bounds and the window is put back afterwards.
+        // Without this a first layout at the default key width drags the window
+        // to the bottom of the range.
+        const auto lowestVisibleKey = keys_.getLowestVisibleKey();
         keys_.setKeyWidth(static_cast<float>(area.getWidth()) / static_cast<float>(kVisibleWhiteKeys));
+        keys_.setBounds(area);
+        keys_.setLowestVisibleKey(lowestVisibleKey);
     }
 
     void KeyboardView::changeListenerCallback(juce::ChangeBroadcaster* source)
