@@ -158,4 +158,12 @@ namespace rp::uicore
     public:
         WidthButton();
     };
+
+    // Rounded-square momentary button showing the cross glyph, for closing
+    // whatever it sits in.
+    class CloseButton : public IconButton
+    {
+    public:
+        CloseButton();
+    };
 }

@@ -191,4 +191,10 @@ namespace rp::uicore
     {
         setShape(Shape::RoundedSquare);
     }
+
+    CloseButton::CloseButton()
+    : IconButton(BinaryData::x_svg, BinaryData::x_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
 }
