@@ -14,7 +14,12 @@ namespace rp::uicore
     // user can select a region by clicking and dragging; the selected region is
     // highlighted with a translucent overlay and reported back as a pair of
     // normalised ratios (0..1) so a caller can show that slice in another
-    // editor view. Selection is opt-in via setSelectionEnabled. The selection
+    // editor view. An existing selection can be reshaped without being redrawn:
+    // dragging either of its edges resizes it, dragging the region between them
+    // slides it along at a fixed width, and a drag starting outside it replaces
+    // it. The pointer says which is which, highlighting an edge it is over and
+    // swapping in a resize or a dragging-hand cursor. Selection is opt-in via
+    // setSelectionEnabled. The selection
     // can additionally carry a fade-in and fade-out, edited via draggable
     // triangle handles and opt-in through setFadeEnabled. Every colour it
     // paints with comes from its ColourIds so a host can restyle a single
@@ -47,15 +52,26 @@ namespace rp::uicore
         // selection is cleared.
         void setSelectionEnabled(bool enabled);
 
-        // Programmatically set the selection. Both arguments are ratios in the
-        // range 0..1; they are clamped and ordered so that start <= end. Has no
-        // effect while selection is disabled (see setSelectionEnabled).
+        // Programmatically set the selection. Both arguments are ratios of what
+        // the component is showing, ordered so that start <= end but NOT
+        // clamped: a caller drawing one slice of a longer sound states an edge
+        // beyond that slice outside 0..1, and the selection is then painted
+        // running off that side. Has no effect while selection is disabled (see
+        // setSelectionEnabled).
         void setSelection(float startRatio, float endRatio);
+
+        // Makes the selection permanent: a click without a drag leaves it alone
+        // instead of clearing it. Off by default. Turn it on where the selection
+        // means something the component cannot invent — a range owned elsewhere,
+        // which a stray click must not be able to destroy.
+        void setSelectionPersistent(bool persistent);
 
         void clearSelection();
 
         bool hasSelection() const;
 
+        // The selection edges as ratios, ordered so that start <= end however
+        // the user arrived at them.
         float getSelectionStart() const;
 
         float getSelectionEnd() const;
@@ -100,12 +116,37 @@ namespace rp::uicore
             Out
         };
 
+        // Identifies what part of the selection, if any, a point is over: one of
+        // its edges, which a drag resizes, or the region between them, which a
+        // drag slides.
+        enum class SelectionHit
+        {
+            None,
+            LeftEdge,
+            RightEdge,
+            Body
+        };
+
+        // What the drag in progress is doing to the selection. Pending is a
+        // press that has not moved yet: it may still become a new selection, so
+        // nothing is disturbed until it does.
+        enum class DragMode
+        {
+            None,
+            Pending,
+            Creating,
+            Resizing,
+            Moving
+        };
+
         void paint(juce::Graphics& g) override;
         void resized() override;
 
         void mouseDown(const juce::MouseEvent& event) override;
         void mouseDrag(const juce::MouseEvent& event) override;
         void mouseUp(const juce::MouseEvent& event) override;
+        void mouseMove(const juce::MouseEvent& event) override;
+        void mouseExit(const juce::MouseEvent& event) override;
 
         void paintSelection(juce::Graphics& g) const;
         void paintFades(juce::Graphics& g) const;
@@ -123,8 +164,27 @@ namespace rp::uicore
         bool fadeHandlesVisible() const;
         void resetFades();
 
+        // The part of the selection the given local point is over, or None. A
+        // fade handle sitting over the same point wins, since it is the smaller
+        // target and is drawn on top.
+        SelectionHit selectionHitAt(juce::Point<int> point) const;
+
+        // The edge the current resize is moving, derived from which side of the
+        // anchor the moving end has ended up on.
+        SelectionHit resizedEdge() const;
+
+        // Slides the whole selection so the point it was grabbed by follows the
+        // pointer, without letting it leave the component or change width.
+        void moveSelectionTo(float pointerRatio);
+
+        // Repaints and swaps the mouse cursor when what the pointer is over
+        // changes.
+        void setHoveredHit(SelectionHit hit);
+        juce::MouseCursor cursorFor(SelectionHit hit) const;
+
         WaveformRenderer renderer_;
         bool selectionEnabled_;
+        bool selectionPersistent_;
         float selectionStartRatio_;
         float selectionEndRatio_;
         bool hasSelection_;
@@ -132,6 +192,16 @@ namespace rp::uicore
         float fadeInRatio_;
         float fadeOutRatio_;
         FadeHandle activeFadeHandle_;
+        SelectionHit hoveredHit_;
+        DragMode dragMode_;
+
+        // Captured when a move drag starts: how far into the selection it was
+        // grabbed, and the width it keeps for the rest of the drag.
+        float moveGrabOffsetRatio_;
+        float moveWidthRatio_;
+
+        // Where a press that has not moved yet would anchor a new selection.
+        float pendingAnchorRatio_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Waveform)
     };
