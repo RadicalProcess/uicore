@@ -6,6 +6,7 @@ add_library(UICore
         source/KeyboardView.cpp
         source/Waveform.cpp
         source/WaveformRenderer.cpp
+        source/WaveformScrollBar.cpp
         source/ColorPalette.cpp
         source/ObjModel.cpp
         source/ImageToggleButton.cpp

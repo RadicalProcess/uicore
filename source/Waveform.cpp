@@ -26,6 +26,18 @@ namespace rp::uicore
         // testing, so the small triangles are comfortable to grab.
         const auto fadeHandleHitMargin_ = 4.0f;
 
+        // Horizontal slack (in pixels) either side of a selection edge within
+        // which a drag resizes the region instead of starting a new one.
+        const auto selectionEdgeHitMargin_ = 5.0f;
+
+        // Line thickness of a selection edge, plain and while it is the grab
+        // target under the pointer.
+        const auto selectionEdgeThickness_ = 1.0f;
+        const auto highlightedEdgeThickness_ = 3.0f;
+
+        // How much the highlighted edge is brightened over the plain one.
+        const auto highlightedEdgeBrightness_ = 0.4f;
+
         // Colours the component falls back to when a host sets none of its
         // ColourIds.
         const auto defaultBackground_ = juce::Colour(30, 30, 30);
@@ -34,14 +46,20 @@ namespace rp::uicore
     }
 
     Waveform::Waveform()
-    : selectionEnabled_(false)
-    , selectionStartRatio_(0.0f)
-    , selectionEndRatio_(0.0f)
-    , hasSelection_(false)
-    , fadeEnabled_(false)
-    , fadeInRatio_(0.0f)
-    , fadeOutRatio_(0.0f)
-    , activeFadeHandle_(FadeHandle::None)
+        : selectionEnabled_(false)
+        , selectionPersistent_(false)
+        , selectionStartRatio_(0.0f)
+        , selectionEndRatio_(0.0f)
+        , hasSelection_(false)
+        , fadeEnabled_(false)
+        , fadeInRatio_(0.0f)
+        , fadeOutRatio_(0.0f)
+        , activeFadeHandle_(FadeHandle::None)
+        , hoveredHit_(SelectionHit::None)
+        , dragMode_(DragMode::None)
+        , moveGrabOffsetRatio_(0.0f)
+        , moveWidthRatio_(0.0f)
+        , pendingAnchorRatio_(0.0f)
     {
         setOpaque(true);
         setColour(backgroundColourId, defaultBackground_);
@@ -121,16 +139,23 @@ namespace rp::uicore
         if (!selectionEnabled_)
             return;
 
-        const auto clampedStart = std::clamp(startRatio, 0.0f, 1.0f);
-        const auto clampedEnd = std::clamp(endRatio, 0.0f, 1.0f);
-
-        selectionStartRatio_ = std::min(clampedStart, clampedEnd);
-        selectionEndRatio_ = std::max(clampedStart, clampedEnd);
+        // Deliberately unclamped. A caller showing one slice of a longer sound
+        // states the selection against that slice, so an edge the slice does not
+        // reach lands outside 0..1 and has to survive being stored: clamping it
+        // would silently drag that edge onto the edge of the view. Painting and
+        // hit testing cope with an edge that is not on screen.
+        selectionStartRatio_ = std::min(startRatio, endRatio);
+        selectionEndRatio_ = std::max(startRatio, endRatio);
         hasSelection_ = true;
         resetFades();
 
         notifySelectionChanged();
         repaint();
+    }
+
+    void Waveform::setSelectionPersistent(bool persistent)
+    {
+        selectionPersistent_ = persistent;
     }
 
     void Waveform::clearSelection()
@@ -142,6 +167,8 @@ namespace rp::uicore
         selectionStartRatio_ = 0.0f;
         selectionEndRatio_ = 0.0f;
         activeFadeHandle_ = FadeHandle::None;
+        dragMode_ = DragMode::None;
+        setHoveredHit(SelectionHit::None);
         resetFades();
 
         notifySelectionChanged();
@@ -155,12 +182,14 @@ namespace rp::uicore
 
     float Waveform::getSelectionStart() const
     {
-        return selectionStartRatio_;
+        // A resize that crossed its anchor leaves the two ratios the other way
+        // round, so order them here as notifySelectionChanged does.
+        return std::min(selectionStartRatio_, selectionEndRatio_);
     }
 
     float Waveform::getSelectionEnd() const
     {
-        return selectionEndRatio_;
+        return std::max(selectionStartRatio_, selectionEndRatio_);
     }
 
     void Waveform::setFadeEnabled(bool enabled)
@@ -224,16 +253,47 @@ namespace rp::uicore
         if (!selectionEnabled_)
             return;
 
-        // Begin a new selection anchored at the click position. Until the user
-        // drags, start and end are identical (an empty selection).
-        const auto ratio = ratioForX(event.x);
-        selectionStartRatio_ = ratio;
-        selectionEndRatio_ = ratio;
-        hasSelection_ = true;
-        resetFades();
+        // Landing on the existing selection reshapes it instead of replacing it,
+        // so the fades it carries survive: an edge resizes, the region between
+        // them slides.
+        const auto hit = selectionHitAt(event.getPosition());
+        const auto leftRatio = std::min(selectionStartRatio_, selectionEndRatio_);
+        const auto rightRatio = std::max(selectionStartRatio_, selectionEndRatio_);
 
-        notifySelectionChanged();
-        repaint();
+        if (hit == SelectionHit::LeftEdge || hit == SelectionHit::RightEdge)
+        {
+            // Re-anchoring the region so that the grabbed edge becomes the
+            // moving end and the opposite edge the fixed anchor lets the
+            // ordinary drag path below do the work, dragging past the anchor
+            // included.
+            const auto grabbingLeftEdge = hit == SelectionHit::LeftEdge;
+
+            selectionStartRatio_ = grabbingLeftEdge ? rightRatio : leftRatio;
+            selectionEndRatio_ = grabbingLeftEdge ? leftRatio : rightRatio;
+            dragMode_ = DragMode::Resizing;
+            setHoveredHit(hit);
+            return;
+        }
+
+        if (hit == SelectionHit::Body)
+        {
+            // Remember where inside the region it was grabbed, so the whole
+            // thing travels with the pointer rather than jumping under it.
+            selectionStartRatio_ = leftRatio;
+            selectionEndRatio_ = rightRatio;
+            moveWidthRatio_ = rightRatio - leftRatio;
+            moveGrabOffsetRatio_ = ratioForX(event.x) - leftRatio;
+            dragMode_ = DragMode::Moving;
+            setHoveredHit(hit);
+            return;
+        }
+
+        // Remember where a new selection would be anchored, but draw nothing
+        // yet: a press that never moves is a click, and a click has no region
+        // to report. Waiting also means the selection already on screen is not
+        // thrown away until there is something to replace it with.
+        pendingAnchorRatio_ = ratioForX(event.x);
+        dragMode_ = DragMode::Pending;
     }
 
     void Waveform::mouseDrag(const juce::MouseEvent& event)
@@ -271,9 +331,33 @@ namespace rp::uicore
         if (!selectionEnabled_)
             return;
 
+        if (dragMode_ == DragMode::Moving)
+        {
+            moveSelectionTo(ratioForX(event.x));
+
+            notifySelectionChanged();
+            repaint();
+            return;
+        }
+
+        // The press has moved, so it really is a new selection after all.
+        if (dragMode_ == DragMode::Pending)
+        {
+            selectionStartRatio_ = pendingAnchorRatio_;
+            hasSelection_ = true;
+            dragMode_ = DragMode::Creating;
+            resetFades();
+        }
+
         // Extend the selection to the current pointer position. The drag may go
         // either side of the anchor, so order the ratios when reporting.
         selectionEndRatio_ = ratioForX(event.x);
+
+        // A resize that crosses the anchor turns the grabbed edge into the other
+        // one, so the highlight follows the moving end rather than the edge the
+        // drag started on.
+        if (dragMode_ == DragMode::Resizing)
+            setHoveredHit(resizedEdge());
 
         notifySelectionChanged();
         repaint();
@@ -291,18 +375,59 @@ namespace rp::uicore
         if (!selectionEnabled_)
             return;
 
-        // A click without a drag leaves an empty (zero-width) selection, which
-        // is not a useful region; treat it as clearing the selection.
-        if (selectionStartRatio_ == selectionEndRatio_)
+        const auto mode = dragMode_;
+        dragMode_ = DragMode::None;
+
+        // A press that never moved is a click, not a region. It drops whatever
+        // was selected, which is the long-standing way to select nothing — but
+        // not where the selection is not the component's to throw away.
+        if (mode == DragMode::Pending)
         {
-            clearSelection();
+            if (!selectionPersistent_)
+                clearSelection();
+
             return;
         }
 
-        selectionEndRatio_ = ratioForX(event.x);
+        if (mode == DragMode::Moving)
+        {
+            moveSelectionTo(ratioForX(event.x));
+        }
+        else
+        {
+            // A resize collapsed exactly onto its own anchor describes no audio
+            // either. Merely pressing an edge does not land here: it leaves the
+            // region it grabbed, which is as wide as it was.
+            if (!selectionPersistent_ && selectionStartRatio_ == selectionEndRatio_)
+            {
+                clearSelection();
+                return;
+            }
+
+            selectionEndRatio_ = ratioForX(event.x);
+        }
+
+        // The pointer has stopped where it stopped, so re-test what it is over
+        // now that the selection has settled.
+        setHoveredHit(selectionHitAt(event.getPosition()));
 
         notifySelectionChanged();
         repaint();
+    }
+
+    void Waveform::mouseMove(const juce::MouseEvent& event)
+    {
+        setHoveredHit(selectionHitAt(event.getPosition()));
+    }
+
+    void Waveform::mouseExit(const juce::MouseEvent& /*event*/)
+    {
+        // A drag that leaves the component keeps its highlight; the selection is
+        // still being reshaped even while the pointer is outside.
+        if (dragMode_ != DragMode::None)
+            return;
+
+        setHoveredHit(SelectionHit::None);
     }
 
     void Waveform::paintSelection(juce::Graphics& g) const
@@ -325,9 +450,19 @@ namespace rp::uicore
         g.setColour(selectionColour.withAlpha(selectionAlpha_));
         g.fillRect(selectionBounds);
 
-        g.setColour(selectionColour);
-        g.drawLine(startX, bounds.getY(), startX, bounds.getBottom(), 1.0f);
-        g.drawLine(endX, bounds.getY(), endX, bounds.getBottom(), 1.0f);
+        // The edge under the pointer is drawn brighter and thicker, so it is
+        // visible before the drag that resizes it starts.
+        const auto highlightColour = selectionColour.brighter(highlightedEdgeBrightness_);
+
+        const auto leftHighlighted = hoveredHit_ == SelectionHit::LeftEdge;
+        g.setColour(leftHighlighted ? highlightColour : selectionColour);
+        g.drawLine(startX, bounds.getY(), startX, bounds.getBottom(),
+                   leftHighlighted ? highlightedEdgeThickness_ : selectionEdgeThickness_);
+
+        const auto rightHighlighted = hoveredHit_ == SelectionHit::RightEdge;
+        g.setColour(rightHighlighted ? highlightColour : selectionColour);
+        g.drawLine(endX, bounds.getY(), endX, bounds.getBottom(),
+                   rightHighlighted ? highlightedEdgeThickness_ : selectionEdgeThickness_);
     }
 
     void Waveform::paintFades(juce::Graphics& g) const
@@ -379,7 +514,7 @@ namespace rp::uicore
         // Draw the grab handles last so they sit on top of the slopes. Each is a
         // small triangle hanging from the top edge at the fade boundary.
         g.setColour(fadeColour);
-        for (const auto handleX : { fadeInEndX, fadeOutStartX })
+        for (const auto handleX : {fadeInEndX, fadeOutStartX})
         {
             juce::Path handle;
             handle.startNewSubPath(handleX - fadeHandleHalfWidth_, top);
@@ -465,6 +600,83 @@ namespace rp::uicore
     bool Waveform::fadeHandlesVisible() const
     {
         return fadeEnabled_ && hasSelection_;
+    }
+
+    Waveform::SelectionHit Waveform::selectionHitAt(juce::Point<int> point) const
+    {
+        if (!selectionEnabled_ || !hasSelection_)
+            return SelectionHit::None;
+
+        // A fade handle overlapping the same point takes the drag, so it must
+        // take the highlight and the cursor with it.
+        if (fadeHandleAt(point) != FadeHandle::None)
+            return SelectionHit::None;
+
+        const auto pointX = static_cast<float>(point.getX());
+        const auto leftX = selectionLeftX();
+        const auto rightX = selectionRightX();
+        const auto leftDistance = std::abs(pointX - leftX);
+        const auto rightDistance = std::abs(pointX - rightX);
+
+        // The edges are the finer targets, so their grab areas are tested first
+        // and win over the region they enclose. On a selection narrow enough for
+        // both to cover the point, the nearer edge wins.
+        if (std::min(leftDistance, rightDistance) <= selectionEdgeHitMargin_)
+            return leftDistance <= rightDistance ? SelectionHit::LeftEdge : SelectionHit::RightEdge;
+
+        if (pointX > leftX && pointX < rightX)
+            return SelectionHit::Body;
+
+        return SelectionHit::None;
+    }
+
+    Waveform::SelectionHit Waveform::resizedEdge() const
+    {
+        return selectionEndRatio_ < selectionStartRatio_ ? SelectionHit::LeftEdge : SelectionHit::RightEdge;
+    }
+
+    void Waveform::moveSelectionTo(float pointerRatio)
+    {
+        // Clamping the leading edge against the width the drag started with
+        // stops the region at either end instead of letting it shrink as it is
+        // pushed off. A region wider than what is on show has no position where
+        // it could sit inside, so it is only held to overlapping it — demanding
+        // more would make it jump the moment it was grabbed.
+        const auto fits = moveWidthRatio_ <= 1.0f;
+        const auto lowest = fits ? 0.0f : -moveWidthRatio_;
+        const auto highest = fits ? 1.0f - moveWidthRatio_ : 1.0f;
+
+        const auto leftRatio = std::clamp(pointerRatio - moveGrabOffsetRatio_, lowest, highest);
+
+        selectionStartRatio_ = leftRatio;
+        selectionEndRatio_ = leftRatio + moveWidthRatio_;
+    }
+
+    void Waveform::setHoveredHit(SelectionHit hit)
+    {
+        setMouseCursor(cursorFor(hit));
+
+        if (hoveredHit_ == hit)
+            return;
+
+        hoveredHit_ = hit;
+        repaint();
+    }
+
+    juce::MouseCursor Waveform::cursorFor(SelectionHit hit) const
+    {
+        switch (hit)
+        {
+            case SelectionHit::LeftEdge:
+            case SelectionHit::RightEdge:
+                return juce::MouseCursor::LeftRightResizeCursor;
+            case SelectionHit::Body:
+                return juce::MouseCursor::DraggingHandCursor;
+            case SelectionHit::None:
+                break;
+        }
+
+        return juce::MouseCursor::NormalCursor;
     }
 
     void Waveform::resetFades()
