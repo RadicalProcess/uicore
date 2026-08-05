@@ -50,7 +50,8 @@ juce_add_binary_data(UIResource
         resource/icons/scissors.svg
         resource/icons/wave.svg
         resource/icons/width.svg
-        resource/icons/loader.svg)
+        resource/icons/loader.svg
+        resource/icons/x.svg)
 
 target_link_libraries(UICore
         PUBLIC
