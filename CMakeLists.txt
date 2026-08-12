@@ -51,7 +51,8 @@ juce_add_binary_data(UIResource
         resource/icons/wave.svg
         resource/icons/width.svg
         resource/icons/loader.svg
-        resource/icons/x.svg)
+        resource/icons/x.svg
+        resource/icons/question.svg)
 
 target_link_libraries(UICore
         PUBLIC
