@@ -166,4 +166,12 @@ namespace rp::uicore
     public:
         CloseButton();
     };
+
+    // Rounded-square momentary button showing the question mark glyph, for
+    // opening help.
+    class HelpButton : public IconButton
+    {
+    public:
+        HelpButton();
+    };
 }

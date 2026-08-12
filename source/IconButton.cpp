@@ -197,4 +197,10 @@ namespace rp::uicore
     {
         setShape(Shape::RoundedSquare);
     }
+
+    HelpButton::HelpButton()
+    : IconButton(BinaryData::question_svg, BinaryData::question_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
 }
