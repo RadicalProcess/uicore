@@ -346,7 +346,14 @@ namespace rp::uicore
             selectionStartRatio_ = pendingAnchorRatio_;
             hasSelection_ = true;
             dragMode_ = DragMode::Creating;
+
+            // A fresh region carries no fades, and the owner of them has to be
+            // told: it is holding the slopes the old region had, and left
+            // unsaid they would outlive the region they were drawn on.
+            const auto hadFades = fadeInRatio_ > 0.0f || fadeOutRatio_ > 0.0f;
             resetFades();
+            if (hadFades)
+                notifyFadeChanged();
         }
 
         // Extend the selection to the current pointer position. The drag may go
