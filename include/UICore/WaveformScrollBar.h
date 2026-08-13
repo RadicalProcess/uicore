@@ -19,8 +19,11 @@ namespace rp::uicore
     // it for reference — typically whatever the companion view is editing — so
     // that a range running off both sides of that view can still be seen whole
     // here. Drag the thumb to travel, drag its edges to change how much is on
-    // show, or click the track to jump. Every colour comes from a ColourId so a
-    // host can tell the thumb and the marked range apart.
+    // show, or click the track to jump. A thumb filling the whole track is the
+    // exception: fully zoomed out there is no track left to click and nowhere
+    // to travel to, so a drag across it draws the slice to show instead. Every
+    // colour comes from a ColourId so a host can tell the thumb and the marked
+    // range apart.
     class WaveformScrollBar : public juce::Component
     {
     public:
@@ -81,6 +84,11 @@ namespace rp::uicore
         void setHoveredHit(ThumbHit hit);
         juce::MouseCursor cursorFor(ThumbHit hit) const;
 
+        // Whether sliding the thumb would take it anywhere. A thumb filling the
+        // track has no room either side, so offering the drag would promise a
+        // journey it cannot make.
+        bool isViewMovable() const;
+
         // Places the view from a pointer position, according to what the drag
         // grabbed, and tells the host.
         void dragTo(float pointerRatio);
@@ -94,6 +102,12 @@ namespace rp::uicore
         float markedEndRatio_;
         ThumbHit hoveredHit_;
         ThumbHit draggedHit_;
+
+        // A press on a thumb that fills the track, which draws a new view once
+        // it moves, and where it was anchored. Exclusive with draggedHit_: a
+        // press takes one path or the other, never both.
+        bool drawingView_;
+        float anchorRatio_;
 
         // How far into the thumb a body drag grabbed it, and the width that drag
         // keeps.

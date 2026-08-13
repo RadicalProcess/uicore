@@ -23,6 +23,11 @@ namespace rp::uicore
         // a drag resizes the view instead of sliding it.
         const auto thumbEdgeHitMargin_ = 5.0f;
 
+        // The least room (in pixels) a thumb needs to either side before
+        // dragging it is worth offering. A thumb filling the track has none at
+        // all, and below this it would travel less than the pointer can aim at.
+        const auto thumbMoveRoomMargin_ = 4.0f;
+
         // The marked range spans the full height, so it reads as a region of the
         // sound rather than a stripe under it. Its alpha is low enough that the
         // thumb still tells over the top of it.
@@ -45,6 +50,8 @@ namespace rp::uicore
         , markedEndRatio_(0.0f)
         , hoveredHit_(ThumbHit::None)
         , draggedHit_(ThumbHit::None)
+        , drawingView_(false)
+        , anchorRatio_(0.0f)
         , grabOffsetRatio_(0.0f)
         , grabWidthRatio_(0.0f)
     {
@@ -138,6 +145,17 @@ namespace rp::uicore
 
         grabWidthRatio_ = viewEndRatio_ - viewStartRatio_;
 
+        if (hit == ThumbHit::None && !isViewMovable())
+        {
+            // Fully zoomed out there is no track beside the thumb to click and
+            // nowhere for it to travel, so the press draws the slice to show
+            // instead. Nothing is disturbed until it moves: a press that never
+            // does is a click, and a click has no slice to state.
+            anchorRatio_ = ratioForX(event.x);
+            drawingView_ = true;
+            return;
+        }
+
         if (hit == ThumbHit::None)
         {
             // A click on the track jumps the thumb to it, centred, and then
@@ -156,6 +174,19 @@ namespace rp::uicore
 
     void WaveformScrollBar::mouseDrag(const juce::MouseEvent& event)
     {
+        if (drawingView_)
+        {
+            // The drag may run either side of the anchor, so the slice is
+            // whatever lies between the two.
+            const auto pointerRatio = ratioForX(event.x);
+
+            placeView(std::min(anchorRatio_, pointerRatio), std::abs(pointerRatio - anchorRatio_));
+
+            notifyViewChanged();
+            repaint();
+            return;
+        }
+
         if (draggedHit_ == ThumbHit::None)
             return;
 
@@ -164,10 +195,11 @@ namespace rp::uicore
 
     void WaveformScrollBar::mouseUp(const juce::MouseEvent& event)
     {
-        if (draggedHit_ == ThumbHit::None)
+        if (draggedHit_ == ThumbHit::None && !drawingView_)
             return;
 
         draggedHit_ = ThumbHit::None;
+        drawingView_ = false;
         setHoveredHit(thumbHitAt(event.getPosition()));
     }
 
@@ -180,7 +212,7 @@ namespace rp::uicore
     {
         // A drag that leaves the component keeps its highlight; the thumb is
         // still being moved even while the pointer is outside.
-        if (draggedHit_ != ThumbHit::None)
+        if (draggedHit_ != ThumbHit::None || drawingView_)
             return;
 
         setHoveredHit(ThumbHit::None);
@@ -250,9 +282,16 @@ namespace rp::uicore
             return leftDistance <= rightDistance ? ThumbHit::LeftEdge : ThumbHit::RightEdge;
 
         if (pointX > leftX && pointX < rightX)
-            return ThumbHit::Body;
+            return isViewMovable() ? ThumbHit::Body : ThumbHit::None;
 
         return ThumbHit::None;
+    }
+
+    bool WaveformScrollBar::isViewMovable() const
+    {
+        const auto viewWidth = viewEndRatio_ - viewStartRatio_;
+
+        return (1.0f - viewWidth) * static_cast<float>(getWidth()) >= thumbMoveRoomMargin_;
     }
 
     void WaveformScrollBar::setHoveredHit(ThumbHit hit)
