@@ -17,8 +17,11 @@ namespace rp::uicore
     // editor view. An existing selection can be reshaped without being redrawn:
     // dragging either of its edges resizes it, dragging the region between them
     // slides it along at a fixed width, and a drag starting outside it replaces
-    // it. The pointer says which is which, highlighting an edge it is over and
-    // swapping in a resize or a dragging-hand cursor. Selection is opt-in via
+    // it. A selection filling the whole view is the exception: it has nowhere to
+    // slide to, so its middle is not a move target either and a drag there
+    // replaces it like any other empty stretch. The pointer says which is which,
+    // highlighting an edge it is over and swapping in a resize or a
+    // dragging-hand cursor. Selection is opt-in via
     // setSelectionEnabled. The selection
     // can additionally carry a fade-in and fade-out, edited via draggable
     // triangle handles and opt-in through setFadeEnabled. Every colour it
@@ -168,6 +171,11 @@ namespace rp::uicore
         // fade handle sitting over the same point wins, since it is the smaller
         // target and is drawn on top.
         SelectionHit selectionHitAt(juce::Point<int> point) const;
+
+        // Whether sliding the selection would take it anywhere. A region filling
+        // what is on show has no room either side, so offering the drag would
+        // promise a move that cannot happen.
+        bool isSelectionMovable() const;
 
         // The edge the current resize is moving, derived from which side of the
         // anchor the moving end has ended up on.

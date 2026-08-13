@@ -30,6 +30,12 @@ namespace rp::uicore
         // which a drag resizes the region instead of starting a new one.
         const auto selectionEdgeHitMargin_ = 5.0f;
 
+        // The least room (in pixels) a selection needs to either side before
+        // dragging its middle is worth offering. A region filling the view has
+        // none at all, and below this it would travel less than the pointer can
+        // aim at.
+        const auto selectionMoveRoomMargin_ = 4.0f;
+
         // Line thickness of a selection edge, plain and while it is the grab
         // target under the pointer.
         const auto selectionEdgeThickness_ = 1.0f;
@@ -346,7 +352,14 @@ namespace rp::uicore
             selectionStartRatio_ = pendingAnchorRatio_;
             hasSelection_ = true;
             dragMode_ = DragMode::Creating;
+
+            // A fresh region carries no fades, and the owner of them has to be
+            // told: it is holding the slopes the old region had, and left
+            // unsaid they would outlive the region they were drawn on.
+            const auto hadFades = fadeInRatio_ > 0.0f || fadeOutRatio_ > 0.0f;
             resetFades();
+            if (hadFades)
+                notifyFadeChanged();
         }
 
         // Extend the selection to the current pointer position. The drag may go
@@ -625,9 +638,21 @@ namespace rp::uicore
             return leftDistance <= rightDistance ? SelectionHit::LeftEdge : SelectionHit::RightEdge;
 
         if (pointX > leftX && pointX < rightX)
-            return SelectionHit::Body;
+            return isSelectionMovable() ? SelectionHit::Body : SelectionHit::None;
 
         return SelectionHit::None;
+    }
+
+    bool Waveform::isSelectionMovable() const
+    {
+        const auto selectionWidth = std::abs(selectionEndRatio_ - selectionStartRatio_);
+
+        // A region wider than the view is only held to overlapping what is on
+        // show (see moveSelectionTo), so it always has somewhere to travel.
+        if (selectionWidth > 1.0f)
+            return true;
+
+        return (1.0f - selectionWidth) * static_cast<float>(getWidth()) >= selectionMoveRoomMargin_;
     }
 
     Waveform::SelectionHit Waveform::resizedEdge() const
