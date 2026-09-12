@@ -182,4 +182,12 @@ namespace rp::uicore
     public:
         KeyButton();
     };
+
+    // Rounded-square momentary button showing the padlock glyph, for what is
+    // shut rather than for the act of opening it.
+    class LockButton : public IconButton
+    {
+    public:
+        LockButton();
+    };
 }

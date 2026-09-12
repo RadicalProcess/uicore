@@ -209,4 +209,10 @@ namespace rp::uicore
     {
         setShape(Shape::RoundedSquare);
     }
+
+    LockButton::LockButton()
+    : IconButton(BinaryData::lock_svg, BinaryData::lock_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
 }
