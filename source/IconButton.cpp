@@ -203,4 +203,10 @@ namespace rp::uicore
     {
         setShape(Shape::RoundedSquare);
     }
+
+    KeyButton::KeyButton()
+    : IconButton(BinaryData::keyround_svg, BinaryData::keyround_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
 }

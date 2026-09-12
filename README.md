@@ -10,6 +10,7 @@ All code lives under the `rp::uicore` namespace and is exported as the CMake tar
 |-----------|--------|-------------|
 | `ComboBox` | `UICore/ComboBox.h` | Styled drop-down selector |
 | `Font` | `UICore/Font.h` | Access to the bundled Roboto Condensed font |
+| `IconButton` | `UICore/IconButton.h` | SVG glyph on an outlined plate, plus the named buttons built on it (`PlayPauseButton`, `RoomButton`, `KeyButton`, …) |
 | `ImageToggleButton` | `UICore/ImageToggleButton.h` | Toggle button rendered from images |
 | `Keyboard` | `UICore/Keyboard.h` | On-screen piano keyboard with a `Listener` interface |
 | `Label` | `UICore/Label.h` | Styled text label |
@@ -53,9 +54,30 @@ rp::uicore::Keyboard keyboard;
 
 ### Resources
 
-Bundled assets (the Roboto Condensed font and a logo) are compiled into the
-`UIResource` binary-data target via `juce_add_binary_data` and linked publicly
-into `rp::UICore`, so consumers automatically get them.
+Bundled assets (the Roboto Condensed font, a logo and the icon set) are compiled
+into the `UIResource` binary-data target via `juce_add_binary_data` and linked
+publicly into `rp::UICore`, so consumers automatically get them.
+
+### Icons
+
+The glyphs in `resource/icons/` are **[Lucide](https://lucide.dev)**, taken
+unmodified from the set. Keep it that way: a hand-drawn or foreign glyph next to
+them reads as a mistake, because the whole set shares one grid and one stroke.
+
+Every file carries the upstream name in its `class` attribute
+(`class="lucide lucide-box"`), which is what to search lucide.dev for — the
+filename here is what the glyph *means* to us, and the two often differ
+(`room.svg` is `box`, `width.svg` is `move-horizontal`, `question.svg` is
+`circle-question-mark`).
+
+`loadWhiteIcon` swaps `currentColor` for white and `IconButton` tints from
+there, so download the icon as-is: 24x24 viewBox, `fill="none"`,
+`stroke="currentColor"`, stroke width 2, round caps and joins.
+
+Adding one is three edits: drop the `.svg` in `resource/icons/`, list it in the
+`juce_add_binary_data(UIResource ...)` block, and add the `IconButton` subclass
+naming it. The binary-data symbol strips punctuation from the filename, so
+`key-round.svg` arrives as `BinaryData::keyround_svg`.
 
 ## Test application
 
@@ -76,3 +98,6 @@ GNU General Public License v3.0 — see [LICENSE](LICENSE).
 
 The bundled Roboto Condensed font is licensed separately under the SIL Open Font
 License; see [resource/OFL.txt](resource/OFL.txt).
+
+The bundled icons are from [Lucide](https://lucide.dev), licensed separately
+under the ISC license.
