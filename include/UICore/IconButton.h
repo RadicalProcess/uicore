@@ -174,4 +174,20 @@ namespace rp::uicore
     public:
         HelpButton();
     };
+
+    // Rounded-square momentary button showing the key glyph, for anything to do
+    // with licensing or unlocking.
+    class KeyButton : public IconButton
+    {
+    public:
+        KeyButton();
+    };
+
+    // Rounded-square momentary button showing the padlock glyph, for what is
+    // shut rather than for the act of opening it.
+    class LockButton : public IconButton
+    {
+    public:
+        LockButton();
+    };
 }
