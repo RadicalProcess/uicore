@@ -215,4 +215,10 @@ namespace rp::uicore
     {
         setShape(Shape::RoundedSquare);
     }
+
+    MenuButton::MenuButton()
+    : IconButton(BinaryData::menu_svg, BinaryData::menu_svgSize)
+    {
+        setShape(Shape::RoundedSquare);
+    }
 }

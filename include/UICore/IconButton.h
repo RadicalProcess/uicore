@@ -190,4 +190,12 @@ namespace rp::uicore
     public:
         LockButton();
     };
+
+    // Rounded-square momentary button showing the hamburger glyph, for opening
+    // a menu of everything that does not warrant a button of its own.
+    class MenuButton : public IconButton
+    {
+    public:
+        MenuButton();
+    };
 }

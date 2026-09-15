@@ -54,7 +54,8 @@ juce_add_binary_data(UIResource
         resource/icons/x.svg
         resource/icons/question.svg
         resource/icons/key-round.svg
-        resource/icons/lock.svg)
+        resource/icons/lock.svg
+        resource/icons/menu.svg)
 
 target_link_libraries(UICore
         PUBLIC
