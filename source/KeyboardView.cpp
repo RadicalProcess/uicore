@@ -82,6 +82,7 @@ namespace rp::uicore
     void KeyboardView::setLowestVisibleKey(int midiNoteNumber)
     {
         keys_.setLowestVisibleKey(clampedLowestNote(midiNoteNumber));
+        placeKeys();
     }
 
     void KeyboardView::resized()
@@ -90,6 +91,8 @@ namespace rp::uicore
 
         if (scrollBar_.isVisible())
             scrollBar_.setBounds(area.removeFromBottom(kScrollBarHeight));
+
+        keysArea_ = area;
 
         if (area.getWidth() <= 0)
         {
@@ -104,14 +107,36 @@ namespace rp::uicore
         // to the bottom of the range.
         const auto lowestVisibleKey = keys_.getLowestVisibleKey();
         keys_.setKeyWidth(static_cast<float>(area.getWidth()) / static_cast<float>(kVisibleWhiteKeys));
-        keys_.setBounds(area);
+        placeKeys();
         keys_.setLowestVisibleKey(lowestVisibleKey);
+    }
+
+    void KeyboardView::placeKeys()
+    {
+        // The keys are drawn from the left edge of the lowest visible key. When
+        // that key is black, its edge lies inside the white key below it, so the
+        // window would open on a sliver of that white key and cut the last white
+        // key short at the right edge. Pushing the keys left by the gap to the
+        // next (white) key lines the window up with its white keys again; the
+        // part hanging off the left is clipped by this view.
+        if (keysArea_.getWidth() <= 0)
+            return;
+
+        const auto lowestVisibleKey = keys_.getLowestVisibleKey();
+        const auto overhang = juce::MidiMessage::isMidiNoteBlack(lowestVisibleKey) && lowestVisibleKey < kLastMidiNote
+                                  ? juce::roundToInt(keys_.getKeyStartPosition(lowestVisibleKey + 1) -
+                                                     keys_.getKeyStartPosition(lowestVisibleKey))
+                                  : 0;
+
+        keys_.setBounds(keysArea_.withLeft(keysArea_.getX() - overhang));
     }
 
     void KeyboardView::changeListenerCallback(juce::ChangeBroadcaster* source)
     {
         if (source != &keys_)
             return;
+
+        placeKeys();
 
         if (!ignoreScrollCallbacks_)
         {
