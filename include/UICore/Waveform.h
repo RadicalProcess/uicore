@@ -112,12 +112,14 @@ namespace rp::uicore
 
     private:
         // Identifies which fade handle, if any, a point is over or is being
-        // dragged.
+        // dragged. Both means the two overlap under the point, and a press
+        // there stays undecided until the drag direction picks one.
         enum class FadeHandle
         {
             None,
             In,
-            Out
+            Out,
+            Both
         };
 
         // Identifies what part of the selection, if any, a point is over: one of
@@ -166,6 +168,13 @@ namespace rp::uicore
         // The handle whose hit area contains the given local point, or None.
         FadeHandle fadeHandleAt(juce::Point<int> point) const;
         bool fadeHandlesVisible() const;
+
+        // Of two overlapping handles, the one a drag in that direction can
+        // actually move: shrinking the fade-out moves its handle right and
+        // shrinking the fade-in moves its handle left, falling back to the
+        // other handle growing when there is nothing to shrink.
+        FadeHandle handleDraggableRight() const;
+        FadeHandle handleDraggableLeft() const;
         void resetFades();
 
         // The part of the selection the given local point is over, or None. A
