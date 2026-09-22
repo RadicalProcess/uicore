@@ -312,6 +312,15 @@ namespace rp::uicore
             if (width <= 0.0f)
                 return;
 
+            if (activeFadeHandle_ == FadeHandle::Both)
+            {
+                const auto dragDistance = event.getDistanceFromDragStartX();
+                if (dragDistance == 0)
+                    return;
+
+                activeFadeHandle_ = dragDistance > 0 ? handleDraggableRight() : handleDraggableLeft();
+            }
+
             const auto pointerX = std::clamp(static_cast<float>(event.x), leftX, rightX);
 
             if (activeFadeHandle_ == FadeHandle::In)
@@ -599,15 +608,30 @@ namespace rp::uicore
         const auto fadeInEndX = leftX + fadeInRatio_ * width;
         const auto fadeOutStartX = rightX - fadeOutRatio_ * width;
 
-        // When both handles sit on top of each other (full selection covered, or
-        // both fades at zero on a tiny selection) the in-handle wins; the
-        // out-handle can still be reached once the in-handle is dragged away.
-        if (std::abs(pointX - fadeInEndX) <= hitHalfWidth)
+        const auto overIn = std::abs(pointX - fadeInEndX) <= hitHalfWidth;
+        const auto overOut = std::abs(pointX - fadeOutStartX) <= hitHalfWidth;
+
+        // When both handles sit on top of each other (the fades meeting, or both
+        // at zero on a tiny selection) neither can win on position alone: the
+        // drag direction decides once the pointer moves (see mouseDrag).
+        if (overIn && overOut)
+            return FadeHandle::Both;
+        if (overIn)
             return FadeHandle::In;
-        if (std::abs(pointX - fadeOutStartX) <= hitHalfWidth)
+        if (overOut)
             return FadeHandle::Out;
 
         return FadeHandle::None;
+    }
+
+    Waveform::FadeHandle Waveform::handleDraggableRight() const
+    {
+        return fadeOutRatio_ > 0.0f ? FadeHandle::Out : FadeHandle::In;
+    }
+
+    Waveform::FadeHandle Waveform::handleDraggableLeft() const
+    {
+        return fadeInRatio_ > 0.0f ? FadeHandle::In : FadeHandle::Out;
     }
 
     bool Waveform::fadeHandlesVisible() const
