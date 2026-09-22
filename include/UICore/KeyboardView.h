@@ -57,6 +57,10 @@ namespace rp::uicore
         void resized() override;
 
     private:
+        // Lays the keys out over keysArea_ so the window's white keys line up
+        // with both edges, even when the window starts on a black key.
+        void placeKeys();
+
         // Keeps the scroll bar's thumb in step with the keys' scroll position
         // (e.g. after a mouse-wheel scroll), and tells listeners the window moved.
         void changeListenerCallback(juce::ChangeBroadcaster* source) override;
@@ -66,6 +70,9 @@ namespace rp::uicore
 
         Keyboard keys_;
         juce::ScrollBar scrollBar_{false};
+
+        // The part of this view the keys fill; they may reach past its left edge.
+        juce::Rectangle<int> keysArea_;
 
         // Guards against the keys <-> scroll bar updates feeding back on each other.
         bool ignoreScrollCallbacks_ = false;
