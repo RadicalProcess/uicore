@@ -22,6 +22,7 @@ All code lives under the `rp::uicore` namespace and is exported as the CMake tar
 | `Waveform` | `UICore/Waveform.h` | Waveform display with playhead, optional click-and-drag region selection (resizable by its edges, movable by its body), and optional draggable fade-in/fade-out handles |
 | `GlissonSlider` | `UICore/GlissonSlider/Slider.h` | Two-axis "glisson" slider (under `rp::uicore::glisson`) |
 | `Style` | `UICore/Style.h` | Shared colors / styling constants (`rp::uicore::styles`) |
+| `Theme` | `UICore/Theme.h` | The dark plugin theme (`rp::uicore::theme`): palette, body margin and panel gap, panel drawing, and styling helpers for section titles, knobs, meters and waveforms |
 | `Utils` | `UICore/Utils.h` | Helper utilities |
 
 ## Dependencies

@@ -21,7 +21,8 @@ add_library(UICore
         source/GlissonSlider/Knob.cpp
         source/Label.cpp
         source/ProgressBar.cpp
-        source/LevelIndicator.cpp)
+        source/LevelIndicator.cpp
+        source/Theme.cpp)
 
 
 add_library(rp::UICore ALIAS UICore)
